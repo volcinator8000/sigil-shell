@@ -7,6 +7,7 @@
 #   sigil-switch status     show the current mode and what is running
 #   sigil-switch palette X  pick a palette (cybersigil wallpaper ashfall coldiron bruise static patina)
 #   sigil-switch restart    restart whichever side is active
+#   sigil-switch test-lock  show the sigil lock screen for 6 s (unlocks by itself)
 set -euo pipefail
 
 CFG="$HOME/.config/sigil"
@@ -20,15 +21,29 @@ notify() { command -v notify-send >/dev/null && notify-send -a sigil-shell "sigi
 stop_sigil() { qs kill -c sigil >/dev/null 2>&1 || true; }
 stop_waybar() { pkill -x waybar >/dev/null 2>&1 || true; }
 
-start_sigil() {
+# Daemons that sigil-shell replaces. Only one notification daemon / polkit agent
+# can own the session at a time, so they are handed over in both directions.
+stop_legacy_daemons() {
     stop_waybar
+    systemctl --user stop swaync hyprpolkitagent >/dev/null 2>&1 || true
+    pkill -x swaync >/dev/null 2>&1 || true
+    pkill -x hyprpaper >/dev/null 2>&1 || true
+}
+start_legacy_daemons() {
+    systemctl --user start swaync hyprpolkitagent >/dev/null 2>&1 || true
+    pgrep -x hyprpaper >/dev/null || setsid -f hyprpaper >/dev/null 2>&1
+    pgrep -x waybar >/dev/null || setsid -f waybar >/dev/null 2>&1
+}
+
+start_sigil() {
     stop_sigil
+    stop_legacy_daemons
     qs -c sigil -n -d >/dev/null 2>&1
 }
 start_legacy() {
     stop_sigil
     "$HOME/.local/bin/sigil-apply" --clear || true
-    pgrep -x waybar >/dev/null || setsid -f waybar >/dev/null 2>&1
+    start_legacy_daemons
 }
 
 to_sigil() {
@@ -51,6 +66,7 @@ case "${1:-status}" in
     legacy|old)    to_legacy ;;
     toggle)        [ "$(mode)" = sigil ] && to_legacy || to_sigil ;;
     restart)       [ "$(mode)" = sigil ] && start_sigil || { stop_waybar; start_legacy; } ;;
+    test-lock)     qs -c sigil ipc call lock test ;;
     palette)
         name="${2:?usage: sigil-switch palette <name>}"
         python3 - "$CFG/settings.json" "$name" <<'EOF'

@@ -50,6 +50,18 @@ PanelWindow {
 
             StatusIcons {}
 
+            Label {
+                // notifications: count, or a slashed bell in do-not-disturb
+                font.pixelSize: 14
+                color: Notifs.dnd ? Theme.dim : Notifs.count > 0 ? Theme.a1 : Theme.fg
+                text: String.fromCodePoint(Notifs.dnd ? 0xF009B : Notifs.count > 0 ? 0xF116B : 0xF009A) + (Notifs.count > 0 && !Notifs.dnd ? " " + Notifs.count : "")
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    onClicked: (m) => m.button === Qt.RightButton ? (Notifs.dnd = !Notifs.dnd) : Actions.run("controlcenter")
+                }
+            }
+
             Rectangle { implicitWidth: 1; implicitHeight: 14; color: Theme.line }
 
             Label {

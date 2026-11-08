@@ -2,8 +2,8 @@
 //@ pragma Env QS_NO_RELOAD_POPUP=1
 pragma ComponentBehavior: Bound
 
-// sigil-shell entry point. One bar, one set of hot corners and one widget layer
-// per screen, plus the shared media panel.
+// sigil-shell entry point. Per screen: wallpaper, widget layer, bar, hot corners.
+// Shared: launcher, control center, notifications, power menu, OSD, lock, polkit, settings.
 
 import QtQuick
 import Quickshell
@@ -11,6 +11,7 @@ import "bar"
 import "corners"
 import "widgets"
 import "panels"
+import "settings"
 
 ShellRoot {
     Variants {
@@ -22,8 +23,17 @@ ShellRoot {
             Bar { screen: perScreen.modelData }
             HotCorners { screen: perScreen.modelData }
             Desktop { screen: perScreen.modelData }
+            Wallpaper { screen: perScreen.modelData }
         }
     }
 
     MediaPanel {}
+    Launcher {}
+    ControlCenter {}
+    NotificationPopups {}
+    PowerMenu {}
+    Osd {}
+    LockScreen {}
+    PolkitDialog {}
+    Settings {}
 }

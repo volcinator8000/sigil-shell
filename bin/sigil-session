@@ -3,6 +3,9 @@
 # Runs sigil-shell when ~/.config/sigil/mode says "sigil", waybar otherwise.
 mode=$(cat "$HOME/.config/sigil/mode" 2>/dev/null || echo legacy)
 if [ "$mode" = sigil ] && command -v qs >/dev/null; then
+    # Anything that D-Bus-activated swaync before the shell came up gives the name back;
+    # sigil-shell re-registers as soon as it is free.
+    systemctl --user stop swaync hyprpolkitagent >/dev/null 2>&1
     exec qs -c sigil -n
 fi
 "$HOME/.local/bin/sigil-apply" --clear >/dev/null 2>&1
