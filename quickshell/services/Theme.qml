@@ -31,6 +31,7 @@ Singleton {
     function bs(n) { return Math.round(n * barScale); }
     property var wallpapers: ({})        // see services/Wallpapers.qml
     property int widgetGrid: 20          // settings.json → widgets.grid (0 = free placement)
+    property var notifications: ({})     // settings.json → notifications { group, timeout, maxPopups, rules: [] }
     property bool settingsLoaded: false
 
     // ── power-aware effects ──────────────────────────────────────────
@@ -102,6 +103,7 @@ Singleton {
         barLyrics = !(s.bar && s.bar.lyrics === false);
         barScale = (s.bar && s.bar.scale) ? Math.max(0.8, Math.min(1.6, s.bar.scale)) : 1.1;
         wallpapers = s.wallpapers || {};
+        notifications = s.notifications || {};
         widgetGrid = (s.widgets && s.widgets.grid !== undefined) ? s.widgets.grid : 20;
         settingsLoaded = true;
     }

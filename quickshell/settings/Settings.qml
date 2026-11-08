@@ -21,6 +21,7 @@ Scope {
     readonly property var pages: [
         { name: "shell",     title: "Shell",       glyph: "\u{F03D8}" },
         { name: "widgets",   title: "Widgets",     glyph: "\u{F072C}" },
+        { name: "notifications", title: "Notifications", glyph: "\u{F009A}" },
         { name: "dashboard", title: "Dashboard",   glyph: "\u{F056E}" },
         { name: "wifi",      title: "Wi-Fi",       glyph: "\u{F05A9}" },
         { name: "bluetooth", title: "Bluetooth",   glyph: "\u{F00AF}" },

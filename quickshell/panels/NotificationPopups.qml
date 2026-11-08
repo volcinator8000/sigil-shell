@@ -1,8 +1,9 @@
 pragma ComponentBehavior: Bound
 
-// Notification popups, top right. A ListModel mirrors Notifs.popups (by notification id)
-// so the ListView can animate: new cards slide in, dismissed or timed-out cards slide out
-// to the right, and the rest glide into place.
+// Notification popups, top right, one card per app group. A ListModel mirrors
+// Notifs.popupGroups (by group key) so the ListView can animate: new groups slide in,
+// dismissed or timed-out ones slide out to the right, a group that gets a new message
+// moves to the top, and the rest glide into place.
 
 import QtQuick
 import Quickshell
@@ -27,6 +28,9 @@ PanelWindow {
     exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "sigil-panel"
+    // keyboard only while typing an inline reply
+    property int replying: 0
+    WlrLayershell.keyboardFocus: replying > 0 ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     ListModel {
         id: model
@@ -35,16 +39,17 @@ PanelWindow {
     Connections { target: list; function onContentHeightChanged() { if (model.count > 0) win.heldHeight = list.contentHeight + 4; } }
 
     function sync() {
-        const want = Notifs.popups.map(n => n.id);
+        const want = Notifs.popupGroups.map(g => g.key);
         for (let i = model.count - 1; i >= 0; i--)
-            if (want.indexOf(model.get(i).nid) < 0) model.remove(i);
-        want.forEach((id, i) => {
+            if (want.indexOf(model.get(i).gkey) < 0) model.remove(i);
+        want.forEach((key, i) => {
             let j = -1;
-            for (let k = 0; k < model.count; k++) if (model.get(k).nid === id) { j = k; break; }
-            if (j < 0) model.insert(Math.min(i, model.count), { nid: id });
+            for (let k = 0; k < model.count; k++) if (model.get(k).gkey === key) { j = k; break; }
+            if (j < 0) model.insert(Math.min(i, model.count), { gkey: key });
+            else if (j !== i && i < model.count) model.move(j, i, 1);
         });
     }
-    Connections { target: Notifs; function onPopupsChanged() { win.sync(); } }
+    Connections { target: Notifs; function onPopupGroupsChanged() { win.sync(); } }
     Component.onCompleted: sync()
 
     ListView {
@@ -72,22 +77,32 @@ PanelWindow {
             NumberAnimation { properties: "y"; duration: Theme.dur(220); easing.type: Easing.OutCubic }
         }
 
-        delegate: NotificationCard {
+        delegate: NotificationGroup {
             id: card
-            required property int nid
-            // keep the object we were created with, so the card still has content while it animates out
-            property var held: null
-            Component.onCompleted: held = Notifs.popups.find(n => n.id === nid) || null
-            notif: held
+            required property string gkey
+            // keep the last items we had, so the card still has content while it animates out
+            readonly property var live: (Notifs.popupGroups.find(g => g.key === gkey) || { items: [] }).items
+            // bound at creation so the card has its real height before the list lays it out
+            property var held: live
+            onLiveChanged: if (live.length) held = live
+            items: held
             popup: true
             width: list.width
-            onClosed: if (held) Notifs.dismiss(held)
+            onDismissGroup: Notifs.dismissAll(held)
+            onDismissOne: (n) => Notifs.dismiss(n)
+            property bool typing: false
+            onReplyFocus: (on) => { if (on !== typing) { typing = on; win.replying += on ? 1 : -1; } }
+            Component.onDestruction: if (typing) win.replying--
 
+            // a new message in the group restarts the countdown
+            readonly property var head: held[0] || null
+            onHeadChanged: if (timer.running) timer.restart()
             HoverHandler { id: hover }
             Timer {
-                interval: card.held ? Notifs.timeoutFor(card.held) : 0
-                running: interval > 0 && !hover.hovered
-                onTriggered: Notifs.dropPopup(card.held)   // stays in history
+                id: timer
+                interval: card.head ? Notifs.timeoutFor(card.head) : 0
+                running: interval > 0 && !hover.hovered && !card.expanded && !card.typing
+                onTriggered: Notifs.dropPopups(card.held)   // stays in history
             }
         }
     }

@@ -27,8 +27,12 @@ Singleton {
     property var cornerInside: ({})
     function setCornerInside(c, v) { const o = Object.assign({}, cornerInside); o[c] = v; cornerInside = o; if (!v) cornerExited(c); }
 
-    function sound(name) {
-        Quickshell.execDetached(["sh", "-c", "[ -x ~/.config/keysound/keysound.sh ] && ~/.config/keysound/keysound.sh play " + (name || "open")]);
+    // The shell knows its own do-not-disturb, so the helper is told to skip its check (--force).
+    // `force` = play even during do-not-disturb (lock/unlock, rules that bypass DND).
+    function sound(name, force) {
+        name = name || "open";
+        if (Notifs.dnd && !force && name !== "lock" && name !== "unlock") return;
+        Quickshell.execDetached(["sh", "-c", "[ -x ~/.config/keysound/keysound.sh ] && exec ~/.config/keysound/keysound.sh play \"$1\" --force", "sh", name]);
     }
 
     function isOpen(action) {

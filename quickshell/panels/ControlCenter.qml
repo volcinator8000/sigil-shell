@@ -225,7 +225,7 @@ Overlay {
                 height: 24
                 Label {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "NOTIFICATIONS" + (Notifs.count ? " · " + Notifs.count : "")
+                    text: "NOTIFICATIONS" + (Notifs.count ? " · " + Notifs.count : "") + (Notifs.historyGroups.length > 1 ? "  /  " + Notifs.historyGroups.length + " APPS" : "")
                     color: Theme.dim
                     font.pixelSize: 10
                     font.letterSpacing: 1.4
@@ -240,16 +240,26 @@ Overlay {
         }
 
         ListView {
+            id: hist
             anchors { left: parent.left; right: parent.right; top: top.bottom; bottom: parent.bottom; margins: 14; topMargin: 8 }
             clip: true
             spacing: 8
-            model: Notifs.history
+            model: Notifs.historyGroups
             boundsBehavior: Flickable.StopAtBounds
-            delegate: NotificationCard {
+            // expanded groups survive the model being rebuilt
+            property var open: ({})
+            delegate: NotificationGroup {
                 required property var modelData
-                notif: modelData
+                items: modelData.items
                 width: ListView.view.width
-                onClosed: Notifs.dismiss(modelData)
+                expanded: !!hist.open[modelData.key] && modelData.items.length > 1
+                onExpandedChanged: {
+                    const o = Object.assign({}, hist.open);
+                    if (expanded) o[modelData.key] = true; else delete o[modelData.key];
+                    hist.open = o;
+                }
+                onDismissGroup: Notifs.dismissAll(modelData.items)
+                onDismissOne: (n) => Notifs.dismiss(n)
             }
             Label {
                 anchors.centerIn: parent
