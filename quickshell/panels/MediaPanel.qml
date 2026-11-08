@@ -37,7 +37,7 @@ PanelWindow {
     Connections { target: Actions; function onMediaOpenChanged() { if (Actions.mediaOpen) { panel.entered = false; autoClose.restart(); } } }
     property bool entered: false
     Timer { id: autoClose; interval: 4000; onTriggered: if (!panel.entered) Actions.mediaOpen = false }
-    Timer { id: leftCorner; interval: 450; onTriggered: if (!panel.entered) Actions.mediaOpen = false }
+    Timer { id: leftCorner; interval: 450; onTriggered: if (!panel.entered && !Actions.cornerInside[panel.corner]) Actions.mediaOpen = false }
     Connections {
         target: Actions
         function onCornerExited(c) { if (Actions.mediaOpen && c === panel.corner) leftCorner.restart(); }

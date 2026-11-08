@@ -23,9 +23,23 @@ Singleton {
     // Panels opened from a corner sit at that corner and close once the pointer leaves both.
     property string openCorner: ""
     signal cornerExited(string corner)
+    // which hot corners the pointer is in right now (set by HotCorners)
+    property var cornerInside: ({})
+    function setCornerInside(c, v) { const o = Object.assign({}, cornerInside); o[c] = v; cornerInside = o; if (!v) cornerExited(c); }
 
     function sound(name) {
         Quickshell.execDetached(["sh", "-c", "[ -x ~/.config/keysound/keysound.sh ] && ~/.config/keysound/keysound.sh play " + (name || "open")]);
+    }
+
+    function isOpen(action) {
+        switch (action) {
+        case "launcher": return launcherMode === "apps";
+        case "controlcenter": case "notifications": return controlCenterOpen;
+        case "power": return powerOpen;
+        case "media": return mediaOpen;
+        case "dashboard": return Widgets.peek;
+        default: return false;
+        }
     }
 
     function closeAll() {
@@ -42,6 +56,9 @@ Singleton {
     }
 
     function run(action, corner) {
+        // A hot corner only ever opens: a repeated trigger (pointer wobbling in the
+        // corner) must not close the panel it just opened.
+        if (corner && isOpen(action)) return;
         openCorner = corner || "";
         switch (action) {
         case "launcher":      openLauncher("apps"); break;

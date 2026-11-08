@@ -58,8 +58,9 @@ PanelWindow {
         if (shown) corner = requestedCorner;
     }
     onVisibleChanged: if (!visible) corner = ""
-    Timer { id: leaveTimer; interval: 300; onTriggered: if (root.shown && root.cornerMode && !root.panelHovered) root.dismissed() }
-    Timer { id: cornerTimer; interval: 450; onTriggered: if (root.shown && root.cornerMode && !root.leaveArmed && !root.panelHovered) root.dismissed() }
+    Timer { id: leaveTimer; interval: 300; onTriggered: if (root.shown && root.cornerMode && !root.panelHovered && !Actions.cornerInside[root.corner]) root.dismissed() }
+    // only close if the pointer really is out of the corner (exit events can be spurious)
+    Timer { id: cornerTimer; interval: 450; onTriggered: if (root.shown && root.cornerMode && !root.leaveArmed && !root.panelHovered && !Actions.cornerInside[root.corner]) root.dismissed() }
     Connections {
         target: Actions
         function onCornerExited(c) { if (root.shown && c === root.corner && !root.leaveArmed) cornerTimer.restart(); }
@@ -97,9 +98,10 @@ PanelWindow {
     implicitWidth: panelWidth
     implicitHeight: panelHeight
 
-    // click outside → close
+    // click outside → close. Not in corner mode: there the panel closes when the pointer
+    // leaves, and a grab would steal the pointer from the corner trigger and loop.
     HyprlandFocusGrab {
-        active: root.shown && root.visible
+        active: root.shown && root.visible && !root.cornerMode
         windows: [root]
         onCleared: if (root.shown && root.closeOnOutsideClick) root.dismissed()
     }

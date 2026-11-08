@@ -35,8 +35,8 @@ Scope {
         MouseArea {
             anchors.fill: parent
             hoverEnabled: true
-            onEntered: dwell.restart()
-            onExited: { dwell.stop(); Actions.cornerExited(corner.key); }
+            onEntered: { Actions.setCornerInside(corner.key, true); dwell.restart(); }
+            onExited: { dwell.stop(); Actions.setCornerInside(corner.key, false); }
         }
         Timer {
             id: dwell
