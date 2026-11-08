@@ -26,6 +26,7 @@ Singleton {
     property var corners: ({ topLeft: "launcher", topRight: "controlcenter", bottomLeft: "media", bottomRight: "power" })
     property var weather: ({ city: "Paris", lat: 48.8566, lon: 2.3522 })
     property string wallpaperOverride: ""
+    property bool barLyrics: true
     property bool settingsLoaded: false
 
     // ── power-aware effects ──────────────────────────────────────────
@@ -76,6 +77,7 @@ Singleton {
         if (s.corners) corners = Object.assign({}, corners, s.corners);
         if (s.weather) weather = Object.assign({}, weather, s.weather);
         wallpaperOverride = s.wallpaper || "";
+        barLyrics = !(s.bar && s.bar.lyrics === false);
         settingsLoaded = true;
     }
 

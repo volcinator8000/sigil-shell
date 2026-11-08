@@ -40,11 +40,21 @@ PanelWindow {
             Workspaces { monitorName: bar.screen ? bar.screen.name : "" }
 
             Label {
-                Layout.fillWidth: true
+                // window title gives way to the lyrics when something is playing
+                Layout.fillWidth: !lyrics.visible
+                Layout.maximumWidth: lyrics.visible ? 260 : -1
                 elide: Text.ElideRight
                 color: Theme.dim
                 text: Hyprland.activeToplevel ? (Hyprland.activeToplevel.title || "") : ""
             }
+
+            Lyrics {
+                id: lyrics
+                maxWidth: frame.width * 0.45
+                Layout.preferredWidth: implicitWidth
+            }
+
+            Item { Layout.fillWidth: true; visible: lyrics.visible }
 
             TrayItems { window: bar }
 
