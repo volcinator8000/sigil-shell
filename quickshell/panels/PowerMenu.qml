@@ -11,7 +11,8 @@ import qs.components
 Overlay {
     id: menu
     shown: Actions.powerOpen
-    dim: 0.6
+    panelWidth: row.implicitWidth + 28
+    panelHeight: 150 + 28
     onDismissed: Actions.powerOpen = false
     requestedCorner: Actions.openCorner
     panelHovered: rowHover.hovered
@@ -37,8 +38,7 @@ Overlay {
 
     Row {
         id: row
-        x: !menu.cornerMode ? (parent.width - width) / 2 : menu.atLeft ? 14 : parent.width - width - 14
-        y: !menu.cornerMode ? (parent.height - height) / 2 : menu.atTop ? Theme.bs(30) + 18 : parent.height - height - 14
+        anchors.centerIn: parent
         spacing: 16
         focus: true
 

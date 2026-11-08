@@ -125,9 +125,26 @@ Singleton {
         items = a;
         save();
     }
+    readonly property int grid: Theme.widgetGrid
+    readonly property var gridSizes: [0, 10, 20, 40]
+    function cycleGrid() { Theme.patchSettings({ widgets: { grid: gridSizes[(gridSizes.indexOf(grid) + 1) % gridSizes.length] } }); }
+    function snap(v) { return grid > 0 ? Math.round(v / grid) * grid : Math.round(v); }
+    function nudge(id, dx, dy) { const w = get(id); if (w) update(id, { x: Math.max(0, w.x + dx), y: Math.max(40, w.y + dy) }); }
+    function stepScale(id, d) { const w = get(id); if (w) update(id, { scale: Math.round(Math.max(0.5, Math.min(2.5, (w.scale || 1) + d)) * 100) / 100 }); }
+    function stepOpacity(id, d) { const w = get(id); if (w) update(id, { opacity: Math.round(Math.max(0.2, Math.min(1, (w.opacity === undefined ? 1 : w.opacity) + d)) * 100) / 100 }); }
+    function selectNext(d) {
+        if (!items.length) { selected = -1; return; }
+        const i = items.findIndex(w => w.id === selected);
+        selected = items[(i < 0 ? 0 : i + d + items.length) % items.length].id;
+    }
+    function openOptions(id) {
+        selected = id;
+        editing = false;
+        Quickshell.execDetached(["qs", "-c", "sigil", "ipc", "call", "settings", "open", "widgets"]);
+    }
     function resetLayout() { items = JSON.parse(JSON.stringify(defaults)); save(); }
 
-    function toggleEdit() { editing = !editing; if (editing) peek = false; }
+    function toggleEdit() { editing = !editing; if (editing) peek = false; else selected = -1; }
     function togglePeek() { peek = !peek; if (peek) editing = false; else peekCorner = ""; }
 
     IpcHandler {
@@ -137,5 +154,6 @@ Singleton {
         function close(): void { root.editing = false; root.peek = false; }
         function add(type: string): int { return root.add(type, {}); }
         function list(): string { return JSON.stringify(root.items); }
+        function select(id: int): void { root.selected = id; }
     }
 }

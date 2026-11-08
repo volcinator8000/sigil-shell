@@ -2,8 +2,13 @@
 --   pcall(dofile, os.getenv("HOME") .. "/sigil-shell/hypr/sigil.lua")
 -- Harmless in legacy mode: the rules only match sigil-shell surfaces.
 
--- Blur behind the bar, panels and glass widgets. Fully transparent pixels are skipped.
-hl.layer_rule({ name = "blur-sigil", match = { namespace = "^sigil-(bar|panel|desktop|desktop-raised)$" }, blur = true, ignore_alpha = 0.3 })
+-- sigil-shell animates its own surfaces; Hyprland's layer fade on top of that doubled
+-- every open/close and made them feel laggy.
+hl.layer_rule({ name = "noanim-sigil", match = { namespace = "^sigil-.*$" }, no_anim = true })
+-- Blur only on panel-sized surfaces (bar, popups, OSD, launcher, control center).
+-- Full-screen layers (wallpaper, desktop widgets, raised dashboard) are never blurred:
+-- Qt redraws the whole surface on any change, which would re-blur the entire screen.
+hl.layer_rule({ name = "blur-sigil", match = { namespace = "^sigil-(bar|panel)$" }, blur = true, ignore_alpha = 0.3 })
 
 -- If a lock screen ever crashes, let a new locker (sigil-do lock / hyprlock) take over
 -- instead of leaving the session stuck on the "lockscreen died" screen.

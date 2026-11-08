@@ -18,7 +18,9 @@ Scope {
     Overlay {
         id: dlg
         shown: agent.isActive && root.flow !== null && !root.flow.isCompleted
-        dim: 0.55
+        panelWidth: 440
+        panelHeight: box.height
+        closeOnOutsideClick: false   // a stray click must not cancel an admin prompt
         onDismissed: if (root.flow) root.flow.cancelAuthenticationRequest()
         onShownChanged: if (shown) { pw.text = ""; pw.forceActiveFocus(); }
 

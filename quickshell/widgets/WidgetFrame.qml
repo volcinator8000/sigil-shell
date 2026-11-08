@@ -62,6 +62,11 @@ Item {
         }
     }
 
+    // ── edit mode ────────────────────────────────────────────────────
+    readonly property bool isSelected: Widgets.selected === entry.id
+    readonly property real curScale: entry.scale !== undefined ? entry.scale : 1
+    readonly property real curOpacity: entry.opacity !== undefined ? entry.opacity : 1
+
     MouseArea {
         anchors.fill: parent
         enabled: frame.editing
@@ -69,18 +74,67 @@ Item {
         cursorShape: drag.active ? Qt.ClosedHandCursor : Qt.OpenHandCursor
         drag.target: frame
         drag.threshold: 2
-        onReleased: {
-            const nx = Math.max(0, Math.round(frame.x / 20) * 20);
-            const ny = Math.max(40, Math.round(frame.y / 20) * 20);
-            Widgets.move(frame.entry.id, nx, ny);
+        onPressed: Widgets.selected = frame.entry.id
+        onReleased: if (drag.active || frame.x !== frame.entry.x || frame.y !== frame.entry.y)
+                        Widgets.move(frame.entry.id, Math.max(0, Widgets.snap(frame.x)), Math.max(40, Widgets.snap(frame.y)))
+    }
+
+    // resize handle: drag to scale (snaps to 5 %)
+    Rectangle {
+        visible: frame.editing && frame.isSelected
+        width: 12; height: 12
+        radius: 3
+        color: Theme.a1
+        x: frame.width - 8
+        y: frame.height - 8
+        MouseArea {
+            anchors.fill: parent
+            anchors.margins: -4
+            cursorShape: Qt.SizeFDiagCursor
+            property real startX: 0
+            property real startScale: 1
+            onPressed: (m) => { startX = mapToItem(null, m.x, m.y).x; startScale = frame.curScale; Widgets.selected = frame.entry.id; }
+            onPositionChanged: (m) => {
+                if (!pressed) return;
+                const dx = mapToItem(null, m.x, m.y).x - startX;
+                frame.scale = Math.max(0.5, Math.min(2.5, Math.round(startScale * (1 + dx / (frame.width * startScale)) * 20) / 20));
+            }
+            onReleased: Widgets.update(frame.entry.id, { scale: frame.scale })
         }
     }
 
+    // toolbar of the selected widget (above it, or below when there is no room)
     Row {
-        visible: frame.editing
-        spacing: 4
-        anchors { right: parent.right; rightMargin: 6; verticalCenter: parent.top }
+        visible: frame.editing && frame.isSelected
+        spacing: 3
+        x: 0
+        y: frame.y < 80 ? frame.height + 8 : -30
+        // keep it readable whatever the widget's own scale / opacity
+        scale: 1 / Math.max(0.01, frame.curScale)
+        transformOrigin: frame.y < 80 ? Item.TopLeft : Item.BottomLeft
+        opacity: 1 / Math.max(0.2, frame.curOpacity)
+
         ChipButton { text: frame.entry.style; small: true; onClicked: Widgets.cycleStyle(frame.entry.id) }
+        ChipButton { text: "◐−"; small: true; onClicked: Widgets.stepOpacity(frame.entry.id, -0.1) }
+        ChipButton { text: Math.round(frame.curOpacity * 100) + "%"; small: true; onClicked: Widgets.update(frame.entry.id, { opacity: 1 }) }
+        ChipButton { text: "◐+"; small: true; onClicked: Widgets.stepOpacity(frame.entry.id, 0.1) }
+        ChipButton { text: "−"; small: true; onClicked: Widgets.stepScale(frame.entry.id, -0.1) }
+        ChipButton { text: frame.curScale.toFixed(1) + "×"; small: true; onClicked: Widgets.update(frame.entry.id, { scale: 1 }) }
+        ChipButton { text: "+"; small: true; onClicked: Widgets.stepScale(frame.entry.id, 0.1) }
+        ChipButton { text: "⧉"; small: true; onClicked: Widgets.selected = Widgets.duplicate(frame.entry.id) }
+        ChipButton { text: "⇡"; small: true; onClicked: Widgets.reorder(frame.entry.id, 1) }
+        ChipButton { text: "⇣"; small: true; onClicked: Widgets.reorder(frame.entry.id, -1) }
+        ChipButton { text: "options"; small: true; onClicked: Widgets.openOptions(frame.entry.id) }
         ChipButton { text: "✕"; small: true; danger: true; onClicked: Widgets.remove(frame.entry.id) }
+    }
+
+    // unselected widgets in edit mode: just their type
+    Label {
+        visible: frame.editing && !frame.isSelected
+        y: -16
+        text: Widgets.typeInfo(frame.entry.type).label.toUpperCase()
+        color: Theme.a2
+        font.pixelSize: 9
+        font.letterSpacing: 1.4
     }
 }

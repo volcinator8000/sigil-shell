@@ -14,7 +14,9 @@ import qs.components
 Overlay {
     id: launcher
     shown: Actions.launcherMode !== ""
-    dim: 0.35
+    panelWidth: 600
+    panelHeight: 470
+    placement: "top"
     onDismissed: Actions.launcherMode = ""
     requestedCorner: Actions.openCorner
     panelHovered: boxHover.hovered
@@ -129,10 +131,7 @@ Overlay {
 
     Rectangle {
         id: box
-        x: !launcher.cornerMode ? (parent.width - width) / 2 : launcher.atLeft ? 10 : parent.width - width - 10
-        y: !launcher.cornerMode ? parent.height * 0.18 : launcher.atTop ? Theme.bs(30) + 14 : parent.height - height - 10
-        width: 600
-        height: 470
+        anchors.fill: parent
         radius: Theme.radius * 1.2
         color: Theme.rich ? Theme.alpha(Theme.s1, 0.92) : Theme.s1
         border.width: 1

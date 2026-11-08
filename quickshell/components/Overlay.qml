@@ -1,8 +1,14 @@
 pragma ComponentBehavior: Bound
 
-// Full-screen overlay on the focused monitor: dimmed (and, via the Hyprland layer
-// rule, blurred) backdrop, keyboard grab while shown, Esc / backdrop click → dismissed().
-// Children go into `content` and fade/scale in with the backdrop.
+// Popup panel window, sized to the panel itself (not full screen), so the compositor
+// only redraws and blurs that area while it animates.
+//  • placement: centred ("center"), near the top ("top", topFraction of the screen),
+//    or a full-height side panel (fullHeight). Opened from a hot corner, it sits at
+//    that corner instead.
+//  • closes on Esc, on a click anywhere else (Hyprland focus grab), and in corner mode
+//    when the pointer leaves: 300 ms after leaving the panel, or 450 ms after leaving
+//    the corner without reaching it.
+//  • `openness` (0..1) animates both ways; the window stays mapped until it is 0.
 
 import QtQuick
 import Quickshell
@@ -14,80 +20,95 @@ PanelWindow {
     id: root
 
     property bool shown: false
-    property real dim: 0.45
     property string ns: "sigil-panel"
     property bool grabKeyboard: true
+    property bool closeOnOutsideClick: true
+    property real dim: 0                 // kept for compatibility; no full-screen backdrop any more
     signal dismissed()
-    default property alias content: holder.data
+    default property alias content: panel.data
+    readonly property Item contentItem: panel
 
-    // Corner mode: opened from a hot corner. Stays open while the pointer is in the
-    // corner zone or over the panel (panels report that via panelHovered), closes
-    // 300 ms after it leaves both.
-    // requestedCorner is latched into `corner` when the overlay opens and kept until it has
-    // fully faded out, so a closing panel never jumps back to the centre for a frame.
+    // size + placement
+    property real panelWidth: 400
+    property real panelHeight: 300
+    property string placement: "center"   // center | top
+    property real topFraction: 0.18
+    property bool fullHeight: false
+    property bool preferLeft: false
+    readonly property int barGap: Theme.bs(30) + 14
+
+    // corner mode (latched while open so a closing panel never jumps)
     property string requestedCorner: ""
     property string corner: ""
     property bool panelHovered: false
     readonly property bool cornerMode: corner !== ""
     readonly property bool atTop: corner.startsWith("top")
-    readonly property bool atLeft: corner.endsWith("Left")
-    readonly property bool pointerInside: panelHovered || cornerZone.containsMouse
+    readonly property bool atLeft: cornerMode ? corner.endsWith("Left") : preferLeft
+
     property bool leaveArmed: false
-    onPointerInsideChanged: {
+    onPanelHoveredChanged: {
         if (!cornerMode || !shown) return;
-        if (pointerInside) { leaveTimer.stop(); leaveArmed = true; }
+        if (panelHovered) { leaveTimer.stop(); cornerTimer.stop(); leaveArmed = true; }
         else if (leaveArmed) leaveTimer.restart();
     }
-    onShownChanged: { leaveArmed = false; leaveTimer.stop(); if (shown) corner = requestedCorner; }
+    onShownChanged: {
+        leaveArmed = false;
+        leaveTimer.stop();
+        cornerTimer.stop();
+        if (shown) corner = requestedCorner;
+    }
     onVisibleChanged: if (!visible) corner = ""
-    Timer { id: leaveTimer; interval: 300; onTriggered: if (root.shown && root.cornerMode && !root.pointerInside) root.dismissed() }
-    // If the pointer never reports being inside (no motion yet), give up after a while
-    Timer { interval: 2500; running: root.shown && root.cornerMode && !root.leaveArmed; onTriggered: if (!root.pointerInside) root.dismissed() }
-    readonly property Item contentItem: holder
+    Timer { id: leaveTimer; interval: 300; onTriggered: if (root.shown && root.cornerMode && !root.panelHovered) root.dismissed() }
+    Timer { id: cornerTimer; interval: 450; onTriggered: if (root.shown && root.cornerMode && !root.leaveArmed && !root.panelHovered) root.dismissed() }
+    Connections {
+        target: Actions
+        function onCornerExited(c) { if (root.shown && c === root.corner && !root.leaveArmed) cornerTimer.restart(); }
+    }
 
-    // 0 = closed, 1 = open. Animated both ways; the surface stays mapped until it reaches 0,
-    // so closing plays out fully. Opening eases out, closing is quicker and eases in.
     property real openness: shown ? 1 : 0
     Behavior on openness {
         NumberAnimation {
-            duration: root.shown ? Theme.dur(210) : Theme.dur(150)
+            duration: root.shown ? Theme.dur(200) : Theme.dur(140)
             easing.type: root.shown ? Easing.OutCubic : Easing.InCubic
         }
     }
     visible: shown || openness > 0.001
+
     screen: Quickshell.screens.find(s => Hyprland.focusedMonitor !== null && s.name === Hyprland.focusedMonitor.name) || Quickshell.screens[0]
-    anchors { top: true; bottom: true; left: true; right: true }
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: ns
     WlrLayershell.keyboardFocus: (shown && grabKeyboard) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
-    Rectangle {
-        id: backdrop
-        anchors.fill: parent
-        color: Theme.alpha(Theme.bg, root.dim)
-        opacity: root.openness
-        MouseArea { anchors.fill: parent; onClicked: root.dismissed() }
+    // no anchors on an axis = centred on that axis by the compositor
+    anchors {
+        top: cornerMode ? (atTop || fullHeight) : (fullHeight || placement === "top")
+        bottom: cornerMode ? (!atTop || fullHeight) : fullHeight
+        left: cornerMode || fullHeight ? atLeft : false
+        right: cornerMode || fullHeight ? !atLeft : false
     }
+    margins {
+        top: (!cornerMode && placement === "top" && !fullHeight) ? Math.round((screen ? screen.height : 1080) * topFraction) : barGap
+        bottom: 10
+        left: 10
+        right: 10
+    }
+    implicitWidth: panelWidth
+    implicitHeight: panelHeight
 
-    MouseArea {
-        id: cornerZone
-        visible: root.cornerMode
-        width: 90
-        height: 90
-        x: root.atLeft ? 0 : parent.width - width
-        y: root.atTop ? 0 : parent.height - height
-        hoverEnabled: true
-        acceptedButtons: Qt.NoButton
+    // click outside → close
+    HyprlandFocusGrab {
+        active: root.shown && root.visible
+        windows: [root]
+        onCleared: if (root.shown && root.closeOnOutsideClick) root.dismissed()
     }
 
     Item {
-        id: holder
+        id: panel
         anchors.fill: parent
         opacity: root.openness
-        scale: (root.cornerMode ? 0.9 : 0.96) + (root.cornerMode ? 0.1 : 0.04) * root.openness
-        // grow out of the corner that opened it, or from the centre
+        scale: (root.cornerMode ? 0.9 : 0.95) + (root.cornerMode ? 0.1 : 0.05) * root.openness
         transformOrigin: !root.cornerMode ? Item.Center
                        : root.atTop ? (root.atLeft ? Item.TopLeft : Item.TopRight)
                        : (root.atLeft ? Item.BottomLeft : Item.BottomRight)

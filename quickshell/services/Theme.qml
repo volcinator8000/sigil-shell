@@ -30,6 +30,7 @@ Singleton {
     property real barScale: 1.1          // settings.json → bar.scale
     function bs(n) { return Math.round(n * barScale); }
     property var wallpapers: ({})        // see services/Wallpapers.qml
+    property int widgetGrid: 20          // settings.json → widgets.grid (0 = free placement)
     property bool settingsLoaded: false
 
     // ── power-aware effects ──────────────────────────────────────────
@@ -73,6 +74,21 @@ Singleton {
         onLoadFailed: root.settingsLoaded = true
     }
 
+    // Deep-merge `patch` into settings.json (unknown keys are kept). The file watcher
+    // then applies it, so every writer goes through the same path.
+    FileView { id: settingsWriter; path: root.dir + "/settings.json"; blockLoading: true; printErrors: false }
+    function patchSettings(patch) {
+        settingsWriter.reload();
+        let s = {};
+        try { s = JSON.parse(settingsWriter.text() || "{}"); } catch (e) { console.warn("sigil: settings.json invalid, not writing"); return; }
+        const merge = (a, b) => {
+            const o = Object.assign({}, a);
+            for (const k in b) o[k] = (b[k] && typeof b[k] === "object" && !Array.isArray(b[k]) && o[k] && typeof o[k] === "object") ? merge(o[k], b[k]) : b[k];
+            return o;
+        };
+        settingsWriter.setText(JSON.stringify(merge(s, patch), null, 2) + "\n");
+    }
+
     function applySettings(txt) {
         let s;
         try { s = JSON.parse(txt); } catch (e) { console.warn("sigil: settings.json is not valid JSON:", e); return; }
@@ -86,6 +102,7 @@ Singleton {
         barLyrics = !(s.bar && s.bar.lyrics === false);
         barScale = (s.bar && s.bar.scale) ? Math.max(0.8, Math.min(1.6, s.bar.scale)) : 1.1;
         wallpapers = s.wallpapers || {};
+        widgetGrid = (s.widgets && s.widgets.grid !== undefined) ? s.widgets.grid : 20;
         settingsLoaded = true;
     }
 
