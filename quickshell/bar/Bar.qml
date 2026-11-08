@@ -1,0 +1,67 @@
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import QtQuick.Layouts
+import Quickshell
+import Quickshell.Wayland
+import Quickshell.Hyprland
+import qs.services
+import qs.components
+
+PanelWindow {
+    id: bar
+
+    anchors { top: true; left: true; right: true }
+    implicitHeight: 36
+    color: "transparent"
+    WlrLayershell.namespace: "sigil-bar"
+    WlrLayershell.layer: WlrLayer.Top
+
+    Rectangle {
+        id: frame
+        anchors { fill: parent; topMargin: 6; leftMargin: 6; rightMargin: 6 }
+        radius: Theme.radius
+        color: Theme.rich ? Theme.alpha(Theme.s1, 0.78) : Theme.s1
+        border.width: 1
+        border.color: Theme.line
+        Behavior on color { ColorAnimation { duration: Theme.dur(300) } }
+
+        RowLayout {
+            anchors { fill: parent; leftMargin: 10; rightMargin: 12 }
+            spacing: 14
+
+            Label {
+                text: "◆"
+                color: Theme.a1
+                font.bold: true
+                font.pixelSize: 13
+            }
+
+            Workspaces { monitorName: bar.screen ? bar.screen.name : "" }
+
+            Label {
+                Layout.fillWidth: true
+                elide: Text.ElideRight
+                color: Theme.dim
+                text: Hyprland.activeToplevel ? (Hyprland.activeToplevel.title || "") : ""
+            }
+
+            TrayItems { window: bar }
+
+            StatusIcons {}
+
+            Rectangle { implicitWidth: 1; implicitHeight: 14; color: Theme.line }
+
+            Label {
+                id: clock
+                font.bold: true
+                text: Qt.formatDateTime(sysClock.date, "HH:mm")
+                SystemClock { id: sysClock; precision: SystemClock.Minutes }
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: Widgets.togglePeek()
+                }
+            }
+        }
+    }
+}

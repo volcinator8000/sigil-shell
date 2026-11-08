@@ -1,0 +1,14 @@
+{
+  "name": "Static",
+  "bg": "#0a0a0a",
+  "s1": "#121212",
+  "s2": "#1b1b1b",
+  "line": "#2a2a2a",
+  "fg": "#ededed",
+  "dim": "#8a8a8a",
+  "a1": "#dfe5ec",
+  "a2": "#b8645c",
+  "ok": "#9fb39a",
+  "warn": "#cfb07a",
+  "crit": "#ff5f56"
+}

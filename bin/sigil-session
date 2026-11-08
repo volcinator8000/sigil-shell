@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Started by Hyprland at login in place of `waybar`.
+# Runs sigil-shell when ~/.config/sigil/mode says "sigil", waybar otherwise.
+mode=$(cat "$HOME/.config/sigil/mode" 2>/dev/null || echo legacy)
+if [ "$mode" = sigil ] && command -v qs >/dev/null; then
+    exec qs -c sigil -n
+fi
+"$HOME/.local/bin/sigil-apply" --clear >/dev/null 2>&1
+exec waybar

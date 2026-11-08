@@ -1,0 +1,32 @@
+{
+  "name": "Cybersigil",
+  "bg": "#050507",
+  "s1": "#0d0d12",
+  "s2": "#14141b",
+  "line": "#1b1b24",
+  "fg": "#dcdce3",
+  "dim": "#6b6b78",
+  "a1": "#3ae0ff",
+  "a2": "#a64dff",
+  "ok": "#39ff14",
+  "warn": "#ffb000",
+  "crit": "#ff2d3a",
+  "ansi": [
+    "#1b1b24",
+    "#ff2d3a",
+    "#39ff14",
+    "#ffb000",
+    "#3ae0ff",
+    "#a64dff",
+    "#ff5cc8",
+    "#dcdce3",
+    "#6b6b78",
+    "#ff5a63",
+    "#7dff66",
+    "#ffc94d",
+    "#7eebff",
+    "#c084ff",
+    "#ff8fd9",
+    "#ffffff"
+  ]
+}
