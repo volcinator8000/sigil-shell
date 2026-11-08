@@ -69,7 +69,7 @@ Scope {
             Image {
                 id: wall
                 anchors.fill: parent
-                source: Theme.wallpaperPath ? "file://" + Theme.wallpaperPath : ""
+                source: Wallpapers.still ? "file://" + Wallpapers.still : ""
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
                 visible: false

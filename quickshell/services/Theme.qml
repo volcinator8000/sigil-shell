@@ -27,6 +27,9 @@ Singleton {
     property var weather: ({ city: "Paris", lat: 48.8566, lon: 2.3522 })
     property string wallpaperOverride: ""
     property bool barLyrics: true
+    property real barScale: 1.1          // settings.json → bar.scale
+    function bs(n) { return Math.round(n * barScale); }
+    property var wallpapers: ({})        // see services/Wallpapers.qml
     property bool settingsLoaded: false
 
     // ── power-aware effects ──────────────────────────────────────────
@@ -78,6 +81,8 @@ Singleton {
         if (s.weather) weather = Object.assign({}, weather, s.weather);
         wallpaperOverride = s.wallpaper || "";
         barLyrics = !(s.bar && s.bar.lyrics === false);
+        barScale = (s.bar && s.bar.scale) ? Math.max(0.8, Math.min(1.6, s.bar.scale)) : 1.1;
+        wallpapers = s.wallpapers || {};
         settingsLoaded = true;
     }
 
@@ -108,7 +113,7 @@ Singleton {
 
     ColorQuantizer {
         id: quantizer
-        source: (root.paletteName === "wallpaper" && root.wallpaperPath) ? "file://" + root.wallpaperPath : ""
+        source: (root.paletteName === "wallpaper" && Wallpapers.still) ? "file://" + Wallpapers.still : ""
         depth: 4
         rescaleSize: 96
         onColorsChanged: if (root.paletteName === "wallpaper" && colors.length > 0) root.setPalette(root.fromColors(colors))

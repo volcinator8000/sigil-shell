@@ -28,7 +28,7 @@ Item {
 
     // only the lyric line; what is playing lives in the media corner
     visible: enabled_ && hasPlayer && hasLyric
-    implicitHeight: 20
+    implicitHeight: Theme.bs(20)
     implicitWidth: visible ? Math.min(row.implicitWidth, maxWidth) : 0
     property real maxWidth: 560
     clip: true
@@ -52,14 +52,14 @@ Item {
     Row {
         id: row
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 8
+        spacing: Theme.bs(8)
 
         Label {
             id: note
             anchors.verticalCenter: parent.verticalCenter
             text: String.fromCodePoint(0xF0387)        // music note
             color: root.player && root.player.isPlaying ? Theme.a2 : Theme.dim
-            font.pixelSize: 13
+            font.pixelSize: Theme.bs(13)
         }
         // the lyric line, fades in when it changes
         Label {
@@ -69,6 +69,7 @@ Item {
             width: Math.min(implicitWidth, root.maxWidth - 24)
             elide: Text.ElideRight
             textFormat: Text.StyledText
+            font.pixelSize: Theme.bs(12)
             text: root.line
             color: root.kind === "paused" ? Theme.dim : Theme.a1
             onTextChanged: if (Theme.rich) fadeIn.restart()

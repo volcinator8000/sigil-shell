@@ -15,7 +15,7 @@ Overlay {
     shown: Actions.controlCenterOpen
     dim: 0.12
     onDismissed: Actions.controlCenterOpen = false
-    corner: shown ? Actions.openCorner : ""
+    requestedCorner: Actions.openCorner
     panelHovered: panelHover.hovered
 
     readonly property string home: Theme.home
@@ -43,7 +43,7 @@ Overlay {
 
     Rectangle {
         id: panel
-        anchors { top: parent.top; topMargin: 44; bottom: parent.bottom; bottomMargin: 10 }
+        anchors { top: parent.top; topMargin: Theme.bs(30) + 14; bottom: parent.bottom; bottomMargin: 10 }
         x: (cc.cornerMode && cc.atLeft) ? 10 : parent.width - width - 10
         width: 390
         radius: Theme.radius * 1.2

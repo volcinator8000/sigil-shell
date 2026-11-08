@@ -12,7 +12,7 @@ PanelWindow {
     screen: Quickshell.screens.find(s => Hyprland.focusedMonitor !== null && s.name === Hyprland.focusedMonitor.name) || Quickshell.screens[0]
     visible: Notifs.popups.length > 0 && !Actions.controlCenterOpen && !Lock.locked
     anchors { top: true; right: true }
-    margins { top: 44; right: 10 }
+    margins { top: Theme.bs(30) + 14; right: 10 }
     implicitWidth: 370
     implicitHeight: Math.max(1, col.implicitHeight)
     color: "transparent"

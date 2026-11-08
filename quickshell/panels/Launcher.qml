@@ -16,7 +16,7 @@ Overlay {
     shown: Actions.launcherMode !== ""
     dim: 0.35
     onDismissed: Actions.launcherMode = ""
-    corner: shown ? Actions.openCorner : ""
+    requestedCorner: Actions.openCorner
     panelHovered: boxHover.hovered
 
     readonly property string mode: Actions.launcherMode || "apps"
@@ -130,7 +130,7 @@ Overlay {
     Rectangle {
         id: box
         x: !launcher.cornerMode ? (parent.width - width) / 2 : launcher.atLeft ? 10 : parent.width - width - 10
-        y: !launcher.cornerMode ? parent.height * 0.18 : launcher.atTop ? 44 : parent.height - height - 10
+        y: !launcher.cornerMode ? parent.height * 0.18 : launcher.atTop ? Theme.bs(30) + 14 : parent.height - height - 10
         width: 600
         height: 470
         radius: Theme.radius * 1.2

@@ -10,7 +10,7 @@ import qs.components
 
 Row {
     id: root
-    spacing: 12
+    spacing: Theme.bs(12)
 
     function g(cp) { return String.fromCodePoint(cp); }
 
@@ -22,7 +22,7 @@ Row {
     Label {
         id: net
         anchors.verticalCenter: parent.verticalCenter
-        font.pixelSize: 14
+        font.pixelSize: Theme.bs(14)
         color: (root.wiredDev || root.wifiNet) ? Theme.fg : Theme.dim
         text: {
             if (root.wiredDev) return root.g(0xF0200);                  // ethernet
@@ -46,7 +46,7 @@ Row {
 
     Label {
         anchors.verticalCenter: parent.verticalCenter
-        font.pixelSize: 14
+        font.pixelSize: Theme.bs(14)
         color: root.muted ? Theme.dim : Theme.fg
         text: root.muted ? root.g(0xF075F) : root.g(root.volume > 0.6 ? 0xF057E : root.volume > 0.25 ? 0xF0580 : 0xF057F)
         MouseArea {
@@ -66,12 +66,12 @@ Row {
 
     Row {
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 5
+        spacing: Theme.bs(5)
         visible: root.batt && root.batt.isLaptopBattery
 
         Rectangle {
             anchors.verticalCenter: parent.verticalCenter
-            width: 20; height: 10
+            width: Theme.bs(20); height: Theme.bs(10)
             radius: 2
             color: "transparent"
             border.width: 1
@@ -88,6 +88,7 @@ Row {
         Label {
             anchors.verticalCenter: parent.verticalCenter
             text: Math.round(root.pct * 100) + "%" + (root.charging ? "+" : "")
+            font.pixelSize: Theme.bs(12)
         }
     }
 }

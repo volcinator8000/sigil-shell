@@ -9,7 +9,7 @@ import qs.services
 Row {
     id: root
     required property var window
-    spacing: 8
+    spacing: Theme.bs(8)
 
     Repeater {
         model: SystemTray.items
@@ -17,8 +17,8 @@ Row {
         delegate: MouseArea {
             id: item
             required property SystemTrayItem modelData
-            implicitWidth: 15
-            implicitHeight: 15
+            implicitWidth: Theme.bs(15)
+            implicitHeight: Theme.bs(15)
             anchors.verticalCenter: parent.verticalCenter
             acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
             cursorShape: Qt.PointingHandCursor

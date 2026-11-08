@@ -7,7 +7,7 @@ import qs.services
 Row {
     id: root
     property string monitorName: ""
-    spacing: 5
+    spacing: Theme.bs(5)
 
     readonly property int count: {
         let m = 5;
@@ -28,7 +28,7 @@ Row {
             readonly property bool urgent: ws !== null && ws.urgent
 
             implicitWidth: pill.width
-            implicitHeight: 14
+            implicitHeight: Theme.bs(14)
             anchors.verticalCenter: parent.verticalCenter
 
             // soft glow behind the active pill (AC only)
@@ -44,9 +44,9 @@ Row {
             Rectangle {
                 id: pill
                 anchors.verticalCenter: parent.verticalCenter
-                width: dot.active ? 22 : 7
-                height: 7
-                radius: Math.min(Theme.radius * 0.4, 3.5)
+                width: dot.active ? Theme.bs(22) : Theme.bs(7)
+                height: Theme.bs(7)
+                radius: Math.min(Theme.radius * 0.4, height / 2)
                 color: dot.urgent ? Theme.crit : dot.active ? Theme.a1 : dot.occupied ? Theme.dim : Theme.line
                 Behavior on width { NumberAnimation { duration: Theme.dur(260); easing.type: Easing.OutBack } }
                 Behavior on color { ColorAnimation { duration: Theme.dur(200) } }

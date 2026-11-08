@@ -24,7 +24,7 @@ PanelWindow {
 
     visible: Actions.mediaOpen
     anchors { top: atTop; bottom: !atTop; left: atLeft; right: !atLeft }
-    margins { top: atTop ? 44 : 0; bottom: atTop ? 0 : 10; left: atLeft ? 10 : 0; right: atLeft ? 0 : 10 }
+    margins { top: atTop ? Theme.bs(30) + 14 : 0; bottom: atTop ? 0 : 10; left: atLeft ? 10 : 0; right: atLeft ? 0 : 10 }
     implicitWidth: 320
     implicitHeight: 110
     color: "transparent"

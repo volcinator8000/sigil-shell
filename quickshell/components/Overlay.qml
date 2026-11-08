@@ -23,6 +23,9 @@ PanelWindow {
     // Corner mode: opened from a hot corner. Stays open while the pointer is in the
     // corner zone or over the panel (panels report that via panelHovered), closes
     // 300 ms after it leaves both.
+    // requestedCorner is latched into `corner` when the overlay opens and kept until it has
+    // fully faded out, so a closing panel never jumps back to the centre for a frame.
+    property string requestedCorner: ""
     property string corner: ""
     property bool panelHovered: false
     readonly property bool cornerMode: corner !== ""
@@ -35,7 +38,8 @@ PanelWindow {
         if (pointerInside) { leaveTimer.stop(); leaveArmed = true; }
         else if (leaveArmed) leaveTimer.restart();
     }
-    onShownChanged: { leaveArmed = false; leaveTimer.stop(); }
+    onShownChanged: { leaveArmed = false; leaveTimer.stop(); if (shown) corner = requestedCorner; }
+    onVisibleChanged: if (!visible) corner = ""
     Timer { id: leaveTimer; interval: 300; onTriggered: if (root.shown && root.cornerMode && !root.pointerInside) root.dismissed() }
     // If the pointer never reports being inside (no motion yet), give up after a while
     Timer { interval: 2500; running: root.shown && root.cornerMode && !root.leaveArmed; onTriggered: if (!root.pointerInside) root.dismissed() }
@@ -74,7 +78,11 @@ PanelWindow {
         id: holder
         anchors.fill: parent
         opacity: backdrop.opacity
-        scale: 0.97 + 0.03 * backdrop.opacity
+        scale: (root.cornerMode ? 0.92 : 0.97) + (root.cornerMode ? 0.08 : 0.03) * backdrop.opacity
+        // grow out of the corner that opened it, or from the centre
+        transformOrigin: !root.cornerMode ? Item.Center
+                       : root.atTop ? (root.atLeft ? Item.TopLeft : Item.TopRight)
+                       : (root.atLeft ? Item.BottomLeft : Item.BottomRight)
         focus: true
         Keys.onEscapePressed: root.dismissed()
     }

@@ -12,7 +12,7 @@ PanelWindow {
     id: bar
 
     anchors { top: true; left: true; right: true }
-    implicitHeight: 36
+    implicitHeight: 6 + Theme.bs(30)
     color: "transparent"
     WlrLayershell.namespace: "sigil-bar"
     WlrLayershell.layer: WlrLayer.Top
@@ -27,14 +27,14 @@ PanelWindow {
         Behavior on color { ColorAnimation { duration: Theme.dur(300) } }
 
         RowLayout {
-            anchors { fill: parent; leftMargin: 10; rightMargin: 12 }
-            spacing: 14
+            anchors { fill: parent; leftMargin: Theme.bs(10); rightMargin: Theme.bs(12) }
+            spacing: Theme.bs(14)
 
             Label {
                 text: "◆"
                 color: Theme.a1
                 font.bold: true
-                font.pixelSize: 13
+                font.pixelSize: Theme.bs(13)
             }
 
             Workspaces { monitorName: bar.screen ? bar.screen.name : "" }
@@ -45,6 +45,7 @@ PanelWindow {
                 Layout.maximumWidth: lyrics.visible ? 260 : -1
                 elide: Text.ElideRight
                 color: Theme.dim
+                font.pixelSize: Theme.bs(12)
                 text: Hyprland.activeToplevel ? (Hyprland.activeToplevel.title || "") : ""
             }
 
@@ -62,7 +63,7 @@ PanelWindow {
 
             Label {
                 // notifications: count, or a slashed bell in do-not-disturb
-                font.pixelSize: 14
+                font.pixelSize: Theme.bs(14)
                 color: Notifs.dnd ? Theme.dim : Notifs.count > 0 ? Theme.a1 : Theme.fg
                 text: String.fromCodePoint(Notifs.dnd ? 0xF009B : Notifs.count > 0 ? 0xF116B : 0xF009A) + (Notifs.count > 0 && !Notifs.dnd ? " " + Notifs.count : "")
                 MouseArea {
@@ -72,11 +73,12 @@ PanelWindow {
                 }
             }
 
-            Rectangle { implicitWidth: 1; implicitHeight: 14; color: Theme.line }
+            Rectangle { implicitWidth: 1; implicitHeight: Theme.bs(14); color: Theme.line }
 
             Label {
                 id: clock
                 font.bold: true
+                font.pixelSize: Theme.bs(12)
                 text: Qt.formatDateTime(sysClock.date, "HH:mm")
                 SystemClock { id: sysClock; precision: SystemClock.Minutes }
                 MouseArea {

@@ -25,7 +25,7 @@ and changes apply live.
   | power menu | wlogout |
   | lock screen (PAM service `hyprlock`) | hyprlock |
   | volume / mic / brightness OSD | none |
-  | wallpaper layer (follows `hyprpaper.conf`, crossfades) | hyprpaper |
+  | wallpaper layer: images, GIF/APNG/animated WebP, video; rotation | hyprpaper |
   | polkit dialog | hyprpolkitagent |
   | settings window | sigil-settings (GTK) |
 
@@ -71,6 +71,22 @@ running, it falls back to the original. `sigil-do lock` uses hyprlock if the sig
 has not engaged within 2 s, and `hypr/sigil.lua` enables `misc:allow_session_lock_restore`.
 
 The choice is remembered in `~/.config/sigil/mode` and used at the next login.
+
+## Wallpapers
+
+Any image Qt + kimageformats can read (jpg png webp avif heif jxl tiff svg psd …),
+animated images (gif, apng, animated webp/avif/jxl) and video (mp4 mkv webm mov avi …,
+muted, via QtMultimedia + ffmpeg). Needs `qt6-multimedia-ffmpeg` and `kimageformats`.
+
+- **Battery**: with `animate: "auto"` moving wallpapers play only on AC. On battery,
+  behind a fullscreen window or while locked, they show a still frame and the decoder
+  is unloaded. Stills are cached in `~/.cache/sigil/stills`.
+- **Rotation** (`settings.json` → `wallpapers`, or the Desktop page): `fixed`; `interval`
+  (every N minutes from a folder, shuffled or in order); `schedule`
+  (`[{"at": "07:00", "path": "file or folder"}, …]`, where the latest slot at or before now wins).
+- IPC: `qs -c sigil ipc call wallpaper next|prev|set <path>|pause|status`.
+- `sigil-switch legacy` hands hyprpaper the still frame and restores the moving
+  wallpaper on the way back.
 
 ## Keys
 

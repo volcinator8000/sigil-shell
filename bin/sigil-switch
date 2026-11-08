@@ -40,9 +40,41 @@ start_sigil() {
     stop_legacy_daemons
     qs -c sigil -n -d >/dev/null 2>&1
 }
+# hyprpaper only draws still images. An animated/video wallpaper is swapped for its
+# still frame while in legacy mode and restored when switching back to sigil.
+WALL_SAVE="$CFG/wallpaper-animated"
+HP="$HOME/.config/hypr/hyprpaper.conf"
+wall_to_still() {
+    python3 - "$HP" "$WALL_SAVE" <<'PY'
+import hashlib, os, re, subprocess, sys
+hp, save = sys.argv[1:]
+try: t = open(hp).read()
+except OSError: sys.exit()
+m = re.search(r"^\s*path\s*=\s*(.+?)\s*$", t, re.M)
+if not m: sys.exit()
+p = m.group(1)
+ext = p.rsplit(".", 1)[-1].lower()
+moving = {"mp4","m4v","mkv","webm","mov","avi","wmv","flv","ogv","mpg","mpeg","ts","3gp","gif","apng","mng"}
+if ext not in moving: sys.exit()
+still = os.path.expanduser("~/.cache/sigil/stills/") + hashlib.md5(p.encode()).hexdigest() + ".jpg"
+if not os.path.exists(still):
+    os.makedirs(os.path.dirname(still), exist_ok=True)
+    subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-y", "-i", p, "-frames:v", "1", "-q:v", "3", still])
+if os.path.exists(still):
+    open(save, "w").write(p)
+    open(hp, "w").write(t.replace(m.group(1), still))
+PY
+}
+wall_restore() {
+    [ -s "$WALL_SAVE" ] || return 0
+    p=$(cat "$WALL_SAVE"); rm -f "$WALL_SAVE"
+    [ -f "$p" ] && python3 -c 'import re,sys;hp,p=sys.argv[1:];t=open(hp).read();open(hp,"w").write(re.sub(r"(?m)^(\s*path\s*=\s*).+$",lambda m:m.group(1)+p,t,1))' "$HP" "$p"
+}
+
 start_legacy() {
     stop_sigil
     "$HOME/.local/bin/sigil-apply" --clear || true
+    wall_to_still
     start_legacy_daemons
 }
 
@@ -52,6 +84,7 @@ to_sigil() {
             && echo "snapshot of /home created" || echo "warning: could not create a /home snapshot" >&2
     fi
     echo sigil > "$MODE_FILE"
+    wall_restore
     start_sigil
     notify "Switched to sigil-shell. SUPER+CTRL+SHIFT+B switches back."
 }

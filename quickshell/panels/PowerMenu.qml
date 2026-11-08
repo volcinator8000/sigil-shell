@@ -13,7 +13,7 @@ Overlay {
     shown: Actions.powerOpen
     dim: 0.6
     onDismissed: Actions.powerOpen = false
-    corner: shown ? Actions.openCorner : ""
+    requestedCorner: Actions.openCorner
     panelHovered: rowHover.hovered
 
     readonly property var items: [
@@ -38,7 +38,7 @@ Overlay {
     Row {
         id: row
         x: !menu.cornerMode ? (parent.width - width) / 2 : menu.atLeft ? 14 : parent.width - width - 14
-        y: !menu.cornerMode ? (parent.height - height) / 2 : menu.atTop ? 48 : parent.height - height - 14
+        y: !menu.cornerMode ? (parent.height - height) / 2 : menu.atTop ? Theme.bs(30) + 18 : parent.height - height - 14
         spacing: 16
         focus: true
 
