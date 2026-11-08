@@ -72,6 +72,21 @@ has not engaged within 2 s, and `hypr/sigil.lua` enables `misc:allow_session_loc
 
 The choice is remembered in `~/.config/sigil/mode` and used at the next login.
 
+## Staying up
+
+- `sigil-shell.service` (systemd user unit) runs the shell. Quickshell relaunches its own shell
+  process after a crash; systemd restarts the whole thing if that fails too. Apps opened from the
+  launcher and the upgrade window get their own scope, so a shell restart never closes them.
+- In sigil mode swaync is masked until reboot (`--runtime`), so D-Bus can't hand it the
+  notification name while the shell restarts. `sigil-switch legacy` unmasks it.
+- `sigil-health` (timer, every minute, ~0.1 s CPU) restarts the shell if it is down, frozen, lost
+  the notification name or its PipeWire connection; restarts WirePlumber/PipeWire when only
+  "Dummy Output" is left; and notifies you if the session bus or PipeWire get close to their
+  1024 open-file limit (naming the programs holding the most connections).
+  Log: `journalctl --user -u sigil-health`, or run `sigil-health -v`.
+- `sigil-units env|link|sigil|legacy` does the plumbing (copy Hyprland's environment into
+  systemd, link the units, hand the session over).
+
 ## Wallpapers
 
 Any image Qt + kimageformats can read (jpg png webp avif heif jxl tiff svg psd …),
@@ -127,7 +142,8 @@ quickshell/
   widgets/               widget layer + types/<name>.qml (one file per widget)
   palettes/*.json        palette definitions
 templates/*.tmpl         app colour templates (header says target file + reload command)
-bin/                     sigil-switch, sigil-session, sigil-apply
+bin/                     sigil-switch, sigil-session, sigil-apply, sigil-units, sigil-health
+systemd/                 sigil-shell.service, sigil-health.{service,timer}
 hypr/sigil.lua           layer blur rules and keybinds
 ```
 

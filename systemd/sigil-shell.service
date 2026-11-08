@@ -1,0 +1,24 @@
+# sigil-shell under systemd, so it comes back by itself if it crashes.
+# Started by bin/sigil-session at login (and by sigil-switch); only runs in sigil mode.
+[Unit]
+Description=sigil-shell (Quickshell desktop shell)
+Documentation=https://github.com/volcinator8000/sigil-shell
+PartOf=graphical-session.target
+After=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+# a shell that crashes on start would otherwise loop forever
+StartLimitIntervalSec=120
+StartLimitBurst=6
+
+[Service]
+Type=simple
+ExecCondition=/bin/sh -c '[ "$(cat %h/.config/sigil/mode 2>/dev/null)" = sigil ]'
+ExecStartPre=-/usr/bin/systemctl --user stop swaync.service hyprpolkitagent.service
+ExecStart=/usr/bin/qs -c sigil -n
+Restart=on-failure
+RestartSec=2
+# Quickshell supervises its own shell process and relaunches it after a crash; systemd covers the
+# supervisor. On stop: TERM to the shell, then anything left in the group (watchers, helper scripts)
+# is killed. Apps from the launcher and the upgrade window run in their own scopes, so they survive.
+KillMode=mixed
+TimeoutStopSec=5

@@ -53,7 +53,8 @@ Singleton {
     }
     Process {
         id: upgrader
-        command: [root.scripts + "/update-now.sh"]
+        // own scope: a shell restart must never kill a running paru
+        command: ["systemd-run", "--user", "--scope", "--quiet", "--collect", "--unit=sigil-upgrade-" + Date.now(), root.scripts + "/update-now.sh"]
         onRunningChanged: { root.upgrading = running; if (!running) root.check(); }
     }
 

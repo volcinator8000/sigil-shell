@@ -18,7 +18,7 @@ mode() { cat "$MODE_FILE" 2>/dev/null || echo legacy; }
 
 notify() { command -v notify-send >/dev/null && notify-send -a sigil-shell "sigil-shell" "$1" || true; echo "$1"; }
 
-stop_sigil() { qs kill -c sigil >/dev/null 2>&1 || true; }
+stop_sigil() { "$HOME/.local/bin/sigil-units" legacy || true; }
 stop_waybar() { pkill -x waybar >/dev/null 2>&1 || true; }
 
 # Daemons that sigil-shell replaces. Only one notification daemon / polkit agent
@@ -36,9 +36,10 @@ start_legacy_daemons() {
 }
 
 start_sigil() {
-    stop_sigil
-    stop_legacy_daemons
-    qs -c sigil -n -d >/dev/null 2>&1
+    stop_waybar
+    systemctl --user stop hyprpolkitagent >/dev/null 2>&1 || true
+    pkill -x hyprpaper >/dev/null 2>&1 || true
+    "$HOME/.local/bin/sigil-units" sigil      # blocks swaync, (re)starts the sigil-shell service
 }
 # hyprpaper only draws still images. An animated/video wallpaper is swapped for its
 # still frame while in legacy mode and restored when switching back to sigil.
@@ -114,7 +115,8 @@ EOF
     status)
         echo "mode:   $(mode)"
         echo "waybar: $(pgrep -x waybar >/dev/null && echo running || echo stopped)"
-        echo "sigil:  $(qs list -c sigil 2>/dev/null | grep -q 'Instance' && echo running || echo stopped)"
+        echo "sigil:  $(qs list -c sigil 2>/dev/null | grep -q 'Instance' && echo running || echo stopped) (service: $(systemctl --user is-active sigil-shell 2>/dev/null))"
+        echo "health: $(systemctl --user is-active sigil-health.timer 2>/dev/null) · last: $(journalctl --user -u sigil-health -n 1 -o cat --no-pager 2>/dev/null | tail -1)"
         echo "palette: $(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("palette","?"))' "$CFG/settings.json" 2>/dev/null || echo '?')" ;;
     *) sed -n '2,10p' "$0"; exit 1 ;;
 esac

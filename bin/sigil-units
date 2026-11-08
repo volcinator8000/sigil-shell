@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# Session plumbing shared by sigil-session (login) and sigil-switch.
+#   sigil-units env       copy Hyprland's environment into the systemd user manager, so services
+#                         (and apps they start) get the same cursor / Qt / GTK / PATH settings
+#   sigil-units link      link this repo's units into ~/.config/systemd/user (daemon-reload if new)
+#   sigil-units sigil     hand the session to sigil-shell (block swaync, start the service + health timer)
+#   sigil-units legacy    stop sigil-shell, unblock swaync
+set -u
+REPO="$(dirname "$(dirname "$(realpath "$0")")")"
+UD="$HOME/.config/systemd/user"
+sc() { systemctl --user "$@" >/dev/null 2>&1; }
+
+VARS="PATH XCURSOR_THEME XCURSOR_SIZE HYPRCURSOR_THEME HYPRCURSOR_SIZE QT_QPA_PLATFORM QT_QPA_PLATFORMTHEME
+QT_WAYLAND_DISABLE_WINDOWDECORATION QT_STYLE_OVERRIDE GDK_BACKEND GDK_DISABLE GTK_A11Y NO_AT_BRIDGE GTK_MODULES
+MOZ_ENABLE_WAYLAND ELECTRON_OZONE_PLATFORM_HINT XDG_SESSION_TYPE XDG_SESSION_DESKTOP XDG_CURRENT_DESKTOP
+DESKTOP_SESSION XDG_BACKEND WAYLAND_DISPLAY DISPLAY HYPRLAND_INSTANCE_SIGNATURE"
+
+link() {
+    mkdir -p "$UD"
+    local changed=0 f
+    for f in "$REPO"/systemd/*.service "$REPO"/systemd/*.timer; do
+        [ "$(readlink "$UD/$(basename "$f")")" = "$f" ] || { ln -sfn "$f" "$UD/$(basename "$f")"; changed=1; }
+    done
+    [ $changed = 1 ] && sc daemon-reload
+    return 0
+}
+
+case "${1:-}" in
+    env)
+        set=""; for v in $VARS; do [ -n "${!v:-}" ] && set="$set $v"; done
+        # shellcheck disable=SC2086
+        systemctl --user import-environment $set
+        command -v dbus-update-activation-environment >/dev/null && dbus-update-activation-environment $set 2>/dev/null
+        ;;
+    link) link ;;
+    sigil)
+        link
+        # D-Bus would otherwise start swaync whenever the shell is briefly away (restart, crash)
+        # and it would keep the notification name. Runtime mask = until reboot or `legacy`.
+        sc mask --runtime swaync.service
+        sc stop swaync.service hyprpolkitagent.service
+        pkill -x swaync 2>/dev/null
+        # a shell started by hand (old way) would hold the IPC socket and the D-Bus names
+        if pgrep -x 'qs|quickshell' >/dev/null && ! systemctl --user is-active -q sigil-shell; then
+            qs kill -c sigil >/dev/null 2>&1
+            for _ in $(seq 1 30); do pgrep -x 'qs|quickshell' >/dev/null || break; sleep 0.1; done
+            pkill -x 'qs|quickshell' 2>/dev/null; sleep 0.3
+        fi
+        sc reset-failed sigil-shell.service
+        sc restart sigil-shell.service
+        sc enable --now sigil-health.timer
+        ;;
+    legacy)
+        sc stop sigil-shell.service
+        qs kill -c sigil >/dev/null 2>&1
+        sc unmask --runtime swaync.service
+        link; sc enable --now sigil-health.timer
+        ;;
+    *) echo "usage: sigil-units env|link|sigil|legacy" >&2; exit 1 ;;
+esac

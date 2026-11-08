@@ -1,0 +1,12 @@
+[Unit]
+Description=sigil health check every minute
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Timer]
+OnActiveSec=60
+OnUnitActiveSec=60
+AccuracySec=10
+
+[Install]
+WantedBy=graphical-session.target

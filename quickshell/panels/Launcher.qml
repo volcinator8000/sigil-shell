@@ -43,6 +43,18 @@ Overlay {
         printErrors: false
         onLoaded: { try { launcher.usage = JSON.parse(text()); } catch (e) {} }
     }
+    // Apps get their own systemd scope: the shell runs as a service, and without this a shell
+    // restart would take every app opened from the launcher down with it.
+    function launch(e) {
+        let cmd = e.command || [];
+        if (!cmd.length) { e.execute(); return; }
+        if (e.runInTerminal) cmd = ["kitty", "-1", "--"].concat(cmd);
+        const unit = "app-sigil-" + String(e.id || "app").replace(/[^A-Za-z0-9_.-]/g, "_") + "-" + Date.now();
+        Quickshell.execDetached({
+            command: ["systemd-run", "--user", "--scope", "--quiet", "--collect", "--unit=" + unit].concat(cmd),
+            workingDirectory: e.workingDirectory || Quickshell.env("HOME")
+        });
+    }
     function bump(id) {
         const u = Object.assign({}, usage);
         u[id] = (u[id] || 0) + 1;
@@ -120,7 +132,7 @@ Overlay {
         const r = results[i];
         if (!r) return;
         Actions.launcherMode = "";
-        if (r.entry) { bump(r.entry.id); r.entry.execute(); }
+        if (r.entry) { bump(r.entry.id); launch(r.entry); }
         else if (r.emoji) Quickshell.execDetached(["wl-copy", r.emoji]);
         else if (r.clip) Quickshell.execDetached(["sh", "-c", "printf '%s\\n' \"$1\" | cliphist decode | wl-copy", "_", r.clip]);
     }

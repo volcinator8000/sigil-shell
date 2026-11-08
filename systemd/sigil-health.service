@@ -1,0 +1,7 @@
+[Unit]
+Description=sigil health check (shell, audio, D-Bus / PipeWire connection leaks)
+ConditionEnvironment=WAYLAND_DISPLAY
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/sigil-health

@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+# sigil-health: run every minute by sigil-health.timer. Fixes what a plain "restart on crash"
+# can't see, and warns early about the kind of leak that took the session down on 2026-11-08.
+#
+#   shell   (sigil mode) service down, IPC frozen, notifications taken by someone else,
+#           or disconnected from PipeWire  → restart sigil-shell
+#   audio   sound cards present but only "Dummy Output" left → restart WirePlumber, then PipeWire
+#   leaks   session D-Bus / PipeWire close to their 1024 open-file limit, or one program with
+#           hundreds of copies running → notification naming the culprits
+#
+# Everything it does goes to the journal:  journalctl --user -u sigil-health
+# Run by hand with -v to see each check.
+set -u
+VERBOSE=0; [ "${1:-}" = "-v" ] && VERBOSE=1
+ST="${XDG_RUNTIME_DIR:-/tmp}/sigil-health"; mkdir -p "$ST"
+MODE=$(cat "$HOME/.config/sigil/mode" 2>/dev/null || echo legacy)
+now=$(date +%s)
+
+log()  { echo "$*"; }
+dbg()  { [ $VERBOSE = 1 ] && echo "  · $*"; return 0; }
+note() { timeout 3 notify-send -a sigil-health -u "${2:-normal}" "sigil-health" "$1" >/dev/null 2>&1 || true; }
+# rate limit: once per $2 seconds for key $1
+due() { local f="$ST/$1"; [ ! -f "$f" ] || [ $((now - $(cat "$f"))) -ge "$2" ] || return 1; echo "$now" > "$f"; }
+# consecutive-failure counter: strike KEY → prints count; clear KEY
+strike() { local f="$ST/strike-$1" n; n=$(( $(cat "$f" 2>/dev/null || echo 0) + 1 )); echo $n > "$f"; echo $n; }
+clear_() { rm -f "$ST/strike-$1"; }
+sc() { systemctl --user "$@"; }
+fds() { ls "/proc/$1/fd" 2>/dev/null | wc -l; }
+# one process snapshot per run (pgrep costs ~200 ms a call with this many processes)
+PS=$(ps -u "$UID" -o pid=,comm=)
+pid_of() { awk -v n="$1" '$2 == n { print $1; exit }' <<<"$PS"; }
+
+restart_shell() {
+    due shell-restart 60 || { log "shell: needs a restart ($1) but restarted <1 min ago, waiting"; return; }
+    log "shell: restarting sigil-shell ($1)"
+    "$HOME/.local/bin/sigil-units" sigil
+    note "Restarted the shell: $1"
+}
+
+# ── shell ────────────────────────────────────────────────────────────
+if [ "$MODE" = sigil ] && command -v qs >/dev/null; then
+    state=$(sc is-active sigil-shell 2>/dev/null)
+    dbg "sigil-shell service: $state"
+    if [ "$state" != active ] && [ "$state" != activating ] && [ "$state" != reloading ]; then
+        restart_shell "the service was $state"
+    else
+        if timeout 5 qs -c sigil ipc call notifs count >/dev/null 2>&1; then clear_ ipc; dbg "ipc answers"
+        elif [ "$(strike ipc)" -ge 2 ]; then clear_ ipc; restart_shell "it stopped answering"; fi
+
+        owner=$(timeout 3 busctl --user status org.freedesktop.Notifications 2>/dev/null | sed -n 's/^Comm=//p')
+        dbg "notifications owned by: ${owner:-nobody}"
+        if [ "$owner" = qs ] || [ "$owner" = quickshell ]; then clear_ notif
+        elif [ "$(strike notif)" -ge 2 ]; then clear_ notif; restart_shell "notifications were held by ${owner:-nobody}"; fi
+
+        if [ -n "$(pid_of pipewire)" ]; then
+            if timeout 5 pw-cli ls Client 2>/dev/null | grep -q 'application.name = "quickshell"'; then clear_ pw; dbg "connected to pipewire"
+            elif [ "$(strike pw)" -ge 2 ]; then clear_ pw; restart_shell "it lost its PipeWire connection (volume, media)"; fi
+        fi
+    fi
+fi
+
+# ── audio ────────────────────────────────────────────────────────────
+if [ -n "$(pid_of pipewire)" ] && grep -q '^ *[0-9]' /proc/asound/cards 2>/dev/null; then
+    sinks=$(timeout 5 pactl list short sinks 2>/dev/null)
+    dbg "sinks: $(echo "$sinks" | awk '{print $2}' | paste -sd' ')"
+    if [ -z "$sinks" ] || ! echo "$sinks" | grep -qv auto_null; then
+        if [ "$(strike audio)" -ge 2 ] && due audio-fix 300; then
+            clear_ audio
+            log "audio: only the dummy output is left, restarting wireplumber"
+            sc restart wireplumber; sleep 4
+            if ! timeout 5 pactl list short sinks 2>/dev/null | grep -qv auto_null; then
+                log "audio: still no device, restarting the pipewire stack"
+                sc restart pipewire pipewire-pulse wireplumber; sleep 4
+                pw_restarted=1
+            fi
+            if timeout 5 pactl list short sinks 2>/dev/null | grep -qv auto_null; then
+                note "Sound devices had disappeared; restarted the audio services. Reopen an app if it stays silent."
+                # the shell keeps its PipeWire connection through a WirePlumber restart, not a PipeWire one
+                [ "$MODE" = sigil ] && [ "${pw_restarted:-0}" = 1 ] && restart_shell "PipeWire was restarted"
+            else
+                note "Sound devices are gone and restarting the audio services didn't help." critical
+            fi
+        fi
+    else clear_ audio; fi
+fi
+
+# ── leaks ────────────────────────────────────────────────────────────
+bus=$(pid_of dbus-broker); busn=$([ -n "$bus" ] && fds "$bus" || echo 0)
+pwp=$(pid_of pipewire);    pwn=$([ -n "$pwp" ] && fds "$pwp" || echo 0)
+top=$(awk '{print $2}' <<<"$PS" | sort | uniq -c | sort -rn | head -1); topn=$(awk '{print $1}' <<<"$top"); topc=$(awk '{print $2}' <<<"$top")
+dbg "open files: session bus $busn, pipewire $pwn (limit 1024) · most copies: $topc ×$topn"
+
+warn=""
+if [ "$busn" -ge 400 ]; then
+    who=$(timeout 5 busctl --user list --unique --no-legend 2>/dev/null | awk '{print $2}' | sort | uniq -c | sort -rn | head -3 \
+          | while read -r c p; do printf '%s ×%s, ' "$(cat /proc/"$p"/comm 2>/dev/null || echo "pid $p")" "$c"; done)
+    warn="$warn D-Bus has $busn/1024 open (most: ${who%, })."
+fi
+if [ "$pwn" -ge 500 ]; then
+    who=$(timeout 5 pw-cli ls Client 2>/dev/null | sed -n 's/.*application.name = "\(.*\)"/\1/p' | sort | uniq -c | sort -rn | head -3 | awk '{printf "%s ×%s, ", $2, $1}')
+    warn="$warn PipeWire has $pwn/1024 open (most: ${who%, })."
+fi
+[ "${topn:-0}" -ge 150 ] && warn="$warn $topn copies of '$topc' are running."
+
+if [ -n "$warn" ]; then
+    urg=normal; { [ "$busn" -ge 750 ] || [ "$pwn" -ge 800 ]; } && urg=critical
+    log "leak warning:$warn"
+    due leak-note $([ $urg = critical ] && echo 300 || echo 1800) && note "Something is leaking connections:$warn" $urg
+fi
+
+log "ok · mode $MODE · bus $busn fds · pipewire $pwn fds · top $topc ×$topn"
