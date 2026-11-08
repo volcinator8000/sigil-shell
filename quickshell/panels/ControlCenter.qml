@@ -15,6 +15,8 @@ Overlay {
     shown: Actions.controlCenterOpen
     dim: 0.12
     onDismissed: Actions.controlCenterOpen = false
+    corner: shown ? Actions.openCorner : ""
+    panelHovered: panelHover.hovered
 
     readonly property string home: Theme.home
     readonly property var toggles: [
@@ -41,7 +43,8 @@ Overlay {
 
     Rectangle {
         id: panel
-        anchors { top: parent.top; right: parent.right; topMargin: 44; rightMargin: 10; bottom: parent.bottom; bottomMargin: 10 }
+        anchors { top: parent.top; topMargin: 44; bottom: parent.bottom; bottomMargin: 10 }
+        x: (cc.cornerMode && cc.atLeft) ? 10 : parent.width - width - 10
         width: 390
         radius: Theme.radius * 1.2
         color: Theme.rich ? Theme.alpha(Theme.s1, 0.9) : Theme.s1
@@ -50,9 +53,10 @@ Overlay {
         focus: true
         Keys.onEscapePressed: Actions.controlCenterOpen = false
         MouseArea { anchors.fill: parent }
+        HoverHandler { id: panelHover }
 
         // slide in from the right
-        transform: Translate { x: cc.shown ? 0 : 30; Behavior on x { NumberAnimation { duration: Theme.dur(220); easing.type: Easing.OutCubic } } }
+        transform: Translate { x: cc.shown ? 0 : ((cc.cornerMode && cc.atLeft) ? -30 : 30); Behavior on x { NumberAnimation { duration: Theme.dur(220); easing.type: Easing.OutCubic } } }
 
         Column {
             id: top

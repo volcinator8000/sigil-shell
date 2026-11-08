@@ -35,6 +35,11 @@ PanelWindow {
     onVisibleChanged: if (visible) { entered = false; autoClose.restart(); }
     property bool entered: false
     Timer { id: autoClose; interval: 4000; onTriggered: if (!panel.entered) Actions.mediaOpen = false }
+    Timer { id: leftCorner; interval: 450; onTriggered: if (!panel.entered) Actions.mediaOpen = false }
+    Connections {
+        target: Actions
+        function onCornerExited(c) { if (Actions.mediaOpen && c === panel.corner) leftCorner.restart(); }
+    }
 
     Rectangle {
         id: card

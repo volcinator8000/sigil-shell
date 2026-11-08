@@ -31,6 +31,7 @@ Singleton {
     property var items: []
     property bool editing: false      // drag / restyle / add / remove
     property bool peek: false         // widgets raised above windows (dashboard corner)
+    property string peekCorner: ""    // corner that raised them ("" = key / clock click)
     property bool ignoreNextChange: false
 
     FileView {
@@ -71,12 +72,12 @@ Singleton {
         save();
     }
     function toggleEdit() { editing = !editing; if (editing) peek = false; }
-    function togglePeek() { peek = !peek; if (peek) editing = false; }
+    function togglePeek() { peek = !peek; if (peek) editing = false; else peekCorner = ""; }
 
     IpcHandler {
         target: "widgets"
         function edit(): void { root.toggleEdit(); }
-        function peek(): void { root.togglePeek(); }
+        function peek(): void { root.peekCorner = ""; root.togglePeek(); }
         function close(): void { root.editing = false; root.peek = false; }
     }
 }

@@ -70,7 +70,24 @@ Scope {
             }
         }
 
-        WidgetCanvas { anchors.fill: parent; editing: Widgets.editing }
+        WidgetCanvas { id: raisedCanvas; anchors.fill: parent; editing: Widgets.editing }
+
+        // Raised from a hot corner: close once the pointer leaves the corner and the widgets.
+        readonly property bool fromCorner: Widgets.peek && Widgets.peekCorner !== ""
+        readonly property bool inside: raisedCanvas.anyHovered || peekZone.containsMouse
+        property bool armed: false
+        onFromCornerChanged: armed = false
+        onInsideChanged: { if (!fromCorner) return; if (inside) { peekLeave.stop(); armed = true; } else if (armed) peekLeave.restart(); }
+        Timer { id: peekLeave; interval: 300; onTriggered: if (!raisedWin.inside) Widgets.peek = false }
+        MouseArea {
+            id: peekZone
+            visible: raisedWin.fromCorner
+            width: 90; height: 90
+            x: Widgets.peekCorner.endsWith("Left") ? 0 : parent.width - width
+            y: Widgets.peekCorner.startsWith("top") ? 0 : parent.height - height
+            hoverEnabled: true
+            acceptedButtons: Qt.NoButton
+        }
 
         // Edit toolbar
         Rectangle {

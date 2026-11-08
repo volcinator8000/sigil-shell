@@ -13,6 +13,8 @@ Overlay {
     shown: Actions.powerOpen
     dim: 0.6
     onDismissed: Actions.powerOpen = false
+    corner: shown ? Actions.openCorner : ""
+    panelHovered: rowHover.hovered
 
     readonly property var items: [
         { key: "L", label: "lock",      glyph: 0xF033E, cmd: [] },
@@ -35,9 +37,12 @@ Overlay {
 
     Row {
         id: row
-        anchors.centerIn: parent
+        x: !menu.cornerMode ? (parent.width - width) / 2 : menu.atLeft ? 14 : parent.width - width - 14
+        y: !menu.cornerMode ? (parent.height - height) / 2 : menu.atTop ? 48 : parent.height - height - 14
         spacing: 16
         focus: true
+
+        HoverHandler { id: rowHover }
 
         Keys.onLeftPressed: menu.current = (menu.current + menu.items.length - 1) % menu.items.length
         Keys.onRightPressed: menu.current = (menu.current + 1) % menu.items.length

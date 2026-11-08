@@ -16,6 +16,8 @@ Overlay {
     shown: Actions.launcherMode !== ""
     dim: 0.35
     onDismissed: Actions.launcherMode = ""
+    corner: shown ? Actions.openCorner : ""
+    panelHovered: boxHover.hovered
 
     readonly property string mode: Actions.launcherMode || "apps"
     readonly property var modes: ["apps", "emoji", "clipboard"]
@@ -127,8 +129,8 @@ Overlay {
 
     Rectangle {
         id: box
-        anchors.horizontalCenter: parent.horizontalCenter
-        y: parent.height * 0.18
+        x: !launcher.cornerMode ? (parent.width - width) / 2 : launcher.atLeft ? 10 : parent.width - width - 10
+        y: !launcher.cornerMode ? parent.height * 0.18 : launcher.atTop ? 44 : parent.height - height - 10
         width: 600
         height: 470
         radius: Theme.radius * 1.2
@@ -136,6 +138,7 @@ Overlay {
         border.width: 1
         border.color: Theme.line
         MouseArea { anchors.fill: parent }   // swallow clicks so the backdrop doesn't close us
+        HoverHandler { id: boxHover }
 
         Column {
             anchors { fill: parent; margins: 14 }

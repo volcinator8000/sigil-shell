@@ -14,6 +14,19 @@ and changes apply live.
   Bruise, Static and Patina. Templates push the active palette to other apps (kitty for now).
 - **Power-aware effects**: full blur, glow and animation on AC. On battery, animations
   get shorter and sensors refresh less often.
+- **Replaces the whole stack**, with the old tools kept for switching back:
+
+  | sigil-shell | replaces |
+  |---|---|
+  | launcher (apps · emoji · clipboard) | rofi |
+  | notifications + control center | swaync |
+  | power menu | wlogout |
+  | lock screen (PAM service `hyprlock`) | hyprlock |
+  | volume / mic / brightness OSD | none |
+  | wallpaper layer (follows `hyprpaper.conf`, crossfades) | hyprpaper |
+  | polkit dialog | hyprpolkitagent |
+  | settings window | sigil-settings (GTK) |
+
 - **Safe to try**: one command switches between this and your previous setup.
 
 ## Install
@@ -47,6 +60,13 @@ globinclude sigil-colors.conf
 | `sigil-switch toggle` | flips between the two. Also bound to **SUPER+CTRL+SHIFT+B** |
 | `sigil-switch status` | current mode and what is running |
 | `sigil-switch palette patina` | change palette |
+| `sigil-switch test-lock` | show the lock screen for 6 s; it unlocks by itself |
+
+Keybinds and autostart lines call `sigil-do <action>` (launcher, emoji, clipboard,
+controlcenter, power, lock, settings, overview, notifd, polkitd, wallpaperd). It runs the
+sigil-shell version in sigil mode and the original tool otherwise. If the shell is not
+running, it falls back to the original. `sigil-do lock` uses hyprlock if the sigil lock
+has not engaged within 2 s, and `hypr/sigil.lua` enables `misc:allow_session_lock_restore`.
 
 The choice is remembered in `~/.config/sigil/mode` and used at the next login.
 
@@ -95,10 +115,8 @@ hypr/sigil.lua           layer blur rules and keybinds
 
 ## Roadmap
 
-Still handed off to existing tools (rofi, swaync, wlogout, hyprlock) until rebuilt here:
-launcher, notifications and control center, power menu, OSD, lock screen. Next up:
-a sigil-settings page for palettes, roundness, font and corner mapping, plus templates
-for starship, GTK/Qt, Hyprland borders and hyprlock.
+Still uses hyprexpose for the window overview. Next: palette templates for starship,
+GTK/Qt, Hyprland borders and hyprlock.
 
 ## License
 

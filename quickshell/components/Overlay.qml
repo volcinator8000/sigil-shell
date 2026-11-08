@@ -19,6 +19,26 @@ PanelWindow {
     property bool grabKeyboard: true
     signal dismissed()
     default property alias content: holder.data
+
+    // Corner mode: opened from a hot corner. Stays open while the pointer is in the
+    // corner zone or over the panel (panels report that via panelHovered), closes
+    // 300 ms after it leaves both.
+    property string corner: ""
+    property bool panelHovered: false
+    readonly property bool cornerMode: corner !== ""
+    readonly property bool atTop: corner.startsWith("top")
+    readonly property bool atLeft: corner.endsWith("Left")
+    readonly property bool pointerInside: panelHovered || cornerZone.containsMouse
+    property bool leaveArmed: false
+    onPointerInsideChanged: {
+        if (!cornerMode || !shown) return;
+        if (pointerInside) { leaveTimer.stop(); leaveArmed = true; }
+        else if (leaveArmed) leaveTimer.restart();
+    }
+    onShownChanged: { leaveArmed = false; leaveTimer.stop(); }
+    Timer { id: leaveTimer; interval: 300; onTriggered: if (root.shown && root.cornerMode && !root.pointerInside) root.dismissed() }
+    // If the pointer never reports being inside (no motion yet), give up after a while
+    Timer { interval: 2500; running: root.shown && root.cornerMode && !root.leaveArmed; onTriggered: if (!root.pointerInside) root.dismissed() }
     readonly property Item contentItem: holder
 
     visible: shown || fade.running
@@ -37,6 +57,17 @@ PanelWindow {
         opacity: root.shown ? 1 : 0
         Behavior on opacity { NumberAnimation { id: fade; duration: Theme.dur(170); easing.type: Easing.OutCubic } }
         MouseArea { anchors.fill: parent; onClicked: root.dismissed() }
+    }
+
+    MouseArea {
+        id: cornerZone
+        visible: root.cornerMode
+        width: 90
+        height: 90
+        x: root.atLeft ? 0 : parent.width - width
+        y: root.atTop ? 0 : parent.height - height
+        hoverEnabled: true
+        acceptedButtons: Qt.NoButton
     }
 
     Item {

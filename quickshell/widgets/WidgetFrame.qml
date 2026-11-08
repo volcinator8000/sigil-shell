@@ -9,6 +9,9 @@ Item {
     id: frame
     property var entry: ({})
     property bool editing: false
+    readonly property bool hovered: hoverH.hovered
+
+    HoverHandler { id: hoverH }
 
     x: entry.x
     y: entry.y

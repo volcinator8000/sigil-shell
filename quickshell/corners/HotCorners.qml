@@ -36,7 +36,7 @@ Scope {
             anchors.fill: parent
             hoverEnabled: true
             onEntered: dwell.restart()
-            onExited: dwell.stop()
+            onExited: { dwell.stop(); Actions.cornerExited(corner.key); }
         }
         Timer {
             id: dwell

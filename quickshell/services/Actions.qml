@@ -19,6 +19,10 @@ Singleton {
     property bool powerOpen: false
     property bool mediaOpen: false
     property string mediaCorner: "bottomLeft"
+    // Hot corner that opened the current panel ("" when opened by key / click).
+    // Panels opened from a corner sit at that corner and close once the pointer leaves both.
+    property string openCorner: ""
+    signal cornerExited(string corner)
 
     function sound(name) {
         Quickshell.execDetached(["sh", "-c", "[ -x ~/.config/keysound/keysound.sh ] && ~/.config/keysound/keysound.sh play " + (name || "open")]);
@@ -38,6 +42,7 @@ Singleton {
     }
 
     function run(action, corner) {
+        openCorner = corner || "";
         switch (action) {
         case "launcher":      openLauncher("apps"); break;
         case "emoji":         openLauncher("emoji"); break;
@@ -46,7 +51,7 @@ Singleton {
         case "controlcenter":
         case "notifications": { const o = !controlCenterOpen; closeAll(); controlCenterOpen = o; if (o) sound("open"); break; }
         case "power":         { const o = !powerOpen; closeAll(); powerOpen = o; if (o) sound("open"); break; }
-        case "dashboard":     Widgets.togglePeek(); break;
+        case "dashboard":     Widgets.peekCorner = corner || ""; Widgets.togglePeek(); break;
         case "media":         { const o = !mediaOpen; mediaCorner = corner || "bottomLeft"; closeAll(); mediaOpen = o; break; }
         case "lock":          closeAll(); Lock.lock(); break;
         case "settings":      closeAll(); Quickshell.execDetached(["qs", "-c", "sigil", "ipc", "call", "settings", "toggle"]); break;
@@ -57,6 +62,6 @@ Singleton {
 
     IpcHandler {
         target: "shell"
-        function run(action: string): void { root.run(action, "bottomLeft"); }
+        function run(action: string): void { root.run(action, ""); }
     }
 }
