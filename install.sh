@@ -8,7 +8,7 @@ REPO="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 
 mkdir -p "$HOME/.config/quickshell" "$HOME/.local/bin" "$HOME/.config/sigil"
 ln -sfn "$REPO/quickshell" "$HOME/.config/quickshell/sigil"
-for f in sigil-switch sigil-session sigil-apply sigil-do; do
+for f in sigil-switch sigil-session sigil-apply sigil-do sigil-new-widget; do
     chmod +x "$REPO/bin/$f"
     ln -sfn "$REPO/bin/$f" "$HOME/.local/bin/$f"
 done

@@ -7,7 +7,9 @@ import qs.components
 Column {
     id: root
     spacing: 7
-    readonly property int w: 276
+    readonly property int w: o("width") || 276
+    property var entry: ({})
+    function o(k) { return Widgets.opt(entry, k); }
 
     Component.onCompleted: Sys.users++
     Component.onDestruction: Sys.users--
@@ -28,8 +30,8 @@ Column {
         Label { width: 46; horizontalAlignment: Text.AlignRight; text: m.value; color: m.tint === Theme.warn ? Theme.warn : Theme.fg; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
     }
 
-    Metric { name: "cpu"; values: Sys.cpuHist; value: Math.round(Sys.cpu) + "%" }
-    Metric { name: "ram"; values: Sys.ramHist; hi: Sys.ramTotal; tint: Theme.a2; value: Sys.ramUsed.toFixed(1) + "G" }
-    Metric { name: "gpu"; values: Sys.gpuHist; value: Math.round(Sys.gpu) + "%" }
-    Metric { name: "temp"; values: Sys.tempHist; lo: 30; hi: 100; tint: Sys.temp > 80 ? Theme.warn : Theme.a2; value: Math.round(Sys.temp) + "°" }
+    Metric { visible: root.o("cpu") !== false; name: "cpu"; values: Sys.cpuHist; value: Math.round(Sys.cpu) + "%" }
+    Metric { visible: root.o("ram") !== false; name: "ram"; values: Sys.ramHist; hi: Sys.ramTotal; tint: Theme.a2; value: Sys.ramUsed.toFixed(1) + "G" }
+    Metric { visible: root.o("gpu") !== false; name: "gpu"; values: Sys.gpuHist; value: Math.round(Sys.gpu) + "%" }
+    Metric { visible: root.o("temp") !== false; name: "temp"; values: Sys.tempHist; lo: 30; hi: 100; tint: Sys.temp > 80 ? Theme.warn : Theme.a2; value: Math.round(Sys.temp) + "°" }
 }

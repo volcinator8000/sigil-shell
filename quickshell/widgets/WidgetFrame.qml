@@ -15,6 +15,9 @@ Item {
 
     x: entry.x
     y: entry.y
+    opacity: entry.opacity !== undefined ? entry.opacity : 1
+    scale: entry.scale !== undefined ? entry.scale : 1
+    transformOrigin: Item.TopLeft
     width: content.item ? content.item.implicitWidth + 24 : 120
     height: content.item ? content.item.implicitHeight + 24 : 60
 
@@ -30,11 +33,25 @@ Item {
         Behavior on color { ColorAnimation { duration: Theme.dur(200) } }
     }
 
+    // highlighted while selected on the settings page
+    Rectangle {
+        anchors.fill: parent
+        anchors.margins: -4
+        radius: Theme.radius + 4
+        color: "transparent"
+        border.width: 2
+        border.color: Theme.a1
+        visible: Widgets.selected === frame.entry.id
+        opacity: 0.9
+    }
+
     Loader {
         id: content
         x: 12
         y: 12
         source: Qt.resolvedUrl("types/" + frame.entry.type + ".qml")
+        // every type gets its entry (opts live in entry.opts; read them with Widgets.opt(entry, key))
+        onLoaded: item.entry = Qt.binding(() => frame.entry)
         // Text on bare widgets gets a soft shadow so it stays readable on any wallpaper.
         layer.enabled: frame.entry.style === "bare" && Theme.rich
         layer.effect: MultiEffect {

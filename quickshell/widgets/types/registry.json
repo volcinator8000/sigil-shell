@@ -1,0 +1,58 @@
+[
+  {
+    "type": "calendar", "label": "Calendar", "description": "Month grid with today highlighted",
+    "options": [
+      { "key": "weekStart", "label": "Week starts on", "kind": "enum", "choices": ["monday", "sunday"], "default": "monday" },
+      { "key": "showWeek", "label": "Show week number", "kind": "bool", "default": true }
+    ]
+  },
+  {
+    "type": "weather", "label": "Weather", "description": "Current conditions from Open-Meteo (location: Shell page)",
+    "options": [
+      { "key": "showForecast", "label": "Show next hours", "kind": "bool", "default": true },
+      { "key": "showRange", "label": "Show high / low", "kind": "bool", "default": true }
+    ]
+  },
+  {
+    "type": "perf", "label": "Performance", "description": "CPU, RAM, GPU and temperature graphs",
+    "options": [
+      { "key": "cpu", "label": "CPU", "kind": "bool", "default": true },
+      { "key": "ram", "label": "RAM", "kind": "bool", "default": true },
+      { "key": "gpu", "label": "GPU", "kind": "bool", "default": true },
+      { "key": "temp", "label": "Temperature", "kind": "bool", "default": true },
+      { "key": "width", "label": "Width", "kind": "int", "min": 200, "max": 480, "step": 10, "default": 276 }
+    ]
+  },
+  {
+    "type": "clock", "label": "Clock", "description": "Large time and date",
+    "options": [
+      { "key": "seconds", "label": "Show seconds", "kind": "bool", "default": false },
+      { "key": "h12", "label": "12-hour clock", "kind": "bool", "default": false },
+      { "key": "showDate", "label": "Show date", "kind": "bool", "default": true },
+      { "key": "size", "label": "Size", "kind": "int", "min": 24, "max": 120, "step": 2, "default": 44 }
+    ]
+  },
+  {
+    "type": "notes", "label": "Notes", "description": "First lines of a Markdown file; [x] items are struck through",
+    "options": [
+      { "key": "path", "label": "File", "kind": "string", "default": "~/notes.md" },
+      { "key": "lines", "label": "Lines shown", "kind": "int", "min": 1, "max": 20, "step": 1, "default": 8 }
+    ]
+  },
+  {
+    "type": "disk", "label": "Disks", "description": "Usage bars for mount points",
+    "options": [
+      { "key": "mounts", "label": "Mount points (space separated)", "kind": "string", "default": "/ /home" }
+    ]
+  },
+  {
+    "type": "command", "label": "Command", "description": "Shows the output of any shell command, refreshed on a timer",
+    "options": [
+      { "key": "title", "label": "Title", "kind": "string", "default": "uptime" },
+      { "key": "command", "label": "Command", "kind": "string", "default": "uptime -p" },
+      { "key": "interval", "label": "Refresh every (s)", "kind": "int", "min": 1, "max": 3600, "step": 1, "default": 60 },
+      { "key": "lines", "label": "Max lines", "kind": "int", "min": 1, "max": 30, "step": 1, "default": 6 },
+      { "key": "size", "label": "Text size", "kind": "int", "min": 9, "max": 48, "step": 1, "default": 12 }
+    ]
+  }
+]

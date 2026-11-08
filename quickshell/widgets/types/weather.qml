@@ -8,6 +8,8 @@ Column {
     id: root
     spacing: 8
     readonly property int w: 196
+    property var entry: ({})
+    function o(k) { return Widgets.opt(entry, k); }
 
     Component.onCompleted: Weather.users++
     Component.onDestruction: Weather.users--
@@ -29,7 +31,7 @@ Column {
                 font.bold: true
             }
             Label {
-                text: Weather.ready ? Weather.description + " · H " + Math.round(Weather.high) + "° L " + Math.round(Weather.low) + "°" : "loading…"
+                text: Weather.ready ? Weather.description + (root.o("showRange") ? " · H " + Math.round(Weather.high) + "° L " + Math.round(Weather.low) + "°" : "") : "loading…"
                 color: Theme.dim
                 font.pixelSize: 11
             }
@@ -37,7 +39,7 @@ Column {
     }
 
     Row {
-        visible: Weather.hours.length > 0
+        visible: Weather.hours.length > 0 && root.o("showForecast") !== false
         Repeater {
             model: Weather.hours
             delegate: Column {

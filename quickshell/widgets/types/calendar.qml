@@ -9,6 +9,8 @@ Column {
     id: root
     spacing: 8
     readonly property int w: 196
+    property var entry: ({})
+    function o(k) { return Widgets.opt(entry, k); }
 
     SystemClock { id: clock; precision: SystemClock.Hours }
 
@@ -25,18 +27,19 @@ Column {
     }
     readonly property var cells: {
         const first = new Date(year, month, 1);
-        const lead = (first.getDay() + 6) % 7;                 // Monday first
+        const mondayFirst = root.o("weekStart") !== "sunday";
+        const lead = mondayFirst ? (first.getDay() + 6) % 7 : first.getDay();
         const daysIn = new Date(year, month + 1, 0).getDate();
         const prevDays = new Date(year, month, 0).getDate();
         const out = [];
         for (let i = lead; i > 0; i--) out.push({ d: prevDays - i + 1, out: true });
-        for (let d = 1; d <= daysIn; d++) out.push({ d: d, out: false, today: d === today.getDate(), we: (lead + d - 1) % 7 >= 5 });
+        for (let d = 1; d <= daysIn; d++) { const dow = new Date(year, month, d).getDay(); out.push({ d: d, out: false, today: d === today.getDate(), we: dow === 0 || dow === 6 }); }
         let k = 1;
         while (out.length % 7) out.push({ d: k++, out: true });
         return out;
     }
 
-    WidgetHeader { width: root.w; title: "calendar"; detail: "week " + root.week }
+    WidgetHeader { width: root.w; title: "calendar"; detail: root.o("showWeek") ? "week " + root.week : "" }
 
     Label {
         text: Qt.formatDate(root.today, "MMMM yyyy")
@@ -50,7 +53,7 @@ Column {
         rowSpacing: 2
 
         Repeater {
-            model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
+            model: root.o("weekStart") === "sunday" ? ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"] : ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
             delegate: Label {
                 required property string modelData
                 width: 26

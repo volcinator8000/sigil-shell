@@ -11,17 +11,19 @@ Column {
     id: root
     spacing: 6
     readonly property int w: 196
+    property var entry: ({})
+    function o(k) { return Widgets.opt(entry, k); }
 
     FileView {
         id: file
-        path: Theme.home + "/notes.md"
+        path: String(root.o("path") || "~/notes.md").replace(/^~/, Theme.home)
         watchChanges: true
         printErrors: false
         onFileChanged: reload()
     }
-    readonly property var lines: (file.text() || "create ~/notes.md").split("\n").filter(l => l.trim()).slice(0, 8)
+    readonly property var lines: (file.text() || "create ~/notes.md").split("\n").filter(l => l.trim()).slice(0, root.o("lines") || 8)
 
-    WidgetHeader { width: root.w; title: "notes"; detail: "~/notes.md" }
+    WidgetHeader { width: root.w; title: "notes"; detail: String(root.o("path") || "").split("/").pop() }
 
     Repeater {
         model: root.lines

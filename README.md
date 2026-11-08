@@ -7,9 +7,11 @@ and changes apply live.
 - **Thin top bar**: workspaces, focused window, tray, network, volume, battery, clock
 - **Hot corners**: each screen corner runs an action you choose (launcher, overview,
   control center, dashboard, power menu, media)
-- **Desktop widgets**: calendar, weather, performance, clock, notes, disks. Drag them
-  around (20 px grid), switch each between *card*, *glass* and *bare*, add or remove
-  them. Adding a new widget type means adding one QML file.
+- **Desktop widgets**: calendar, weather, performance, clock, notes, disks, and a
+  *command* widget that shows the output of any shell command. Drag them around (20 px
+  grid), and set style, opacity, scale and per-type options on the Widgets page of the
+  settings window. `sigil-new-widget <name>` scaffolds a new type: one QML file plus its
+  options in `widgets/types/registry.json`. It shows up live, settings form included.
 - **Seven palettes**: Cybersigil, one generated from your wallpaper, Ashfall, Cold Iron,
   Bruise, Static and Patina. Templates push the active palette to other apps (kitty for now).
 - **Power-aware effects**: full blur, glow and animation on AC. On battery, animations

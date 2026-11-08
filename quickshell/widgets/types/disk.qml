@@ -10,11 +10,13 @@ Column {
     id: root
     spacing: 7
     readonly property int w: 196
+    property var entry: ({})
+    function o(k) { return Widgets.opt(entry, k); }
     property var mounts: []
 
     Process {
         id: df
-        command: ["df", "--output=target,pcent", "/", "/home"]
+        command: ["df", "--output=target,pcent"].concat(String(root.o("mounts") || "/").split(/\s+/).filter(m => m))
         stdout: StdioCollector {
             onStreamFinished: {
                 const seen = {};
@@ -25,6 +27,7 @@ Column {
         }
     }
     Timer { interval: 60000; running: true; repeat: true; triggeredOnStart: true; onTriggered: df.running = true }
+    onEntryChanged: df.running = true
 
     WidgetHeader { width: root.w; title: "disks"; detail: "btrfs" }
 

@@ -1,0 +1,91 @@
+#!/usr/bin/env python3
+"""Create a new desktop widget type.
+
+    sigil-new-widget <name> [--label "Pretty name"] [--description "..."]
+
+Writes quickshell/widgets/types/<name>.qml from a commented template and adds an
+entry to registry.json. The shell watches both, so the type shows up right away
+in the widget edit bar (SUPER+W) and on the Widgets page of the settings window.
+Edit the QML and its options in registry.json; changes apply on save.
+"""
+import argparse
+import json
+import os
+import re
+import sys
+from pathlib import Path
+
+TYPES = Path(os.path.realpath(__file__)).parent.parent / "quickshell" / "widgets" / "types"
+
+TEMPLATE = '''pragma ComponentBehavior: Bound
+
+// {label}: {description}
+//
+// How widget types work
+//   • `entry` is this widget's saved record; read options with o("key"). Option
+//     defaults and the settings-page controls come from registry.json → "{name}".
+//   • Size: give the root a width (here via `w`); the frame adds padding and the
+//     card/glass/bare background around it.
+//   • Colours, font, radius: Theme.* (Theme.fg, Theme.dim, Theme.a1, Theme.radius…).
+//   • Data: Quickshell.Io Process / FileView, or the services in ../../services
+//     (Sys, Weather, Audio, Brightness, Notifs…). Slow down on battery with Theme.rich.
+import QtQuick
+import Quickshell
+import Quickshell.Io
+import qs.services
+import qs.components
+
+Column {{
+    id: root
+    property var entry: ({{}})
+    function o(k) {{ return Widgets.opt(entry, k); }}
+    readonly property int w: 200
+    spacing: 6
+
+    WidgetHeader {{ width: root.w; title: "{label}"; detail: "" }}
+
+    Label {{
+        width: root.w
+        wrapMode: Text.Wrap
+        text: o("text")
+        font.pixelSize: o("size") || 14
+        color: Theme.fg
+    }}
+}}
+'''
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="Create a new sigil-shell desktop widget type.")
+    ap.add_argument("name", help="type id: lowercase letters, digits, dashes")
+    ap.add_argument("--label")
+    ap.add_argument("--description", default="Custom widget")
+    a = ap.parse_args()
+
+    if not re.fullmatch(r"[a-z][a-z0-9-]*", a.name):
+        print("name must be lowercase letters, digits and dashes, starting with a letter", file=sys.stderr)
+        return 1
+    label = a.label or a.name.replace("-", " ").title()
+    qml = TYPES / f"{a.name}.qml"
+    reg_path = TYPES / "registry.json"
+    reg = json.loads(reg_path.read_text())
+    if qml.exists() or any(t["type"] == a.name for t in reg):
+        print(f"widget type '{a.name}' already exists", file=sys.stderr)
+        return 1
+
+    qml.write_text(TEMPLATE.format(name=a.name, label=label, description=a.description))
+    reg.append({
+        "type": a.name, "label": label, "description": a.description,
+        "options": [
+            {"key": "text", "label": "Text", "kind": "string", "default": "edit " + qml.name},
+            {"key": "size", "label": "Text size", "kind": "int", "min": 9, "max": 64, "step": 1, "default": 14},
+        ],
+    })
+    reg_path.write_text(json.dumps(reg, indent=2) + "\n")
+    print(f"created {qml}\nregistered '{a.name}' in {reg_path}")
+    print(f"add one to the desktop: qs -c sigil ipc call widgets add {a.name}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
