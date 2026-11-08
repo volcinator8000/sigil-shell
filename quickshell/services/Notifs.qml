@@ -39,14 +39,22 @@ Singleton {
     }
 
     function dropPopup(n) { popups = popups.filter(p => p !== n); }
-    function dismiss(n) { dropPopup(n); n.dismiss(); }
+    // Take the card off screen first and dismiss once its slide-out has played,
+    // so the card keeps its content while it animates.
+    function dismiss(n) {
+        dropPopup(n);
+        const t = Qt.createQmlObject('import QtQuick; Timer { interval: 260 }', root);
+        t.triggered.connect(() => { if (n) n.dismiss(); t.destroy(); });
+        t.start();
+    }
     function clearAll() {
         popups = [];
         for (const n of server.trackedNotifications.values.slice()) n.dismiss();
     }
     function timeoutFor(n) {
         if (n.urgency === NotificationUrgency.Critical) return 0;
-        return n.expireTimeout > 0 ? n.expireTimeout * 1000 : 6000;
+        // expireTimeout is in milliseconds (from the sender); clamp silly values
+        return n.expireTimeout > 0 ? Math.max(1500, Math.min(n.expireTimeout, 60000)) : 6000;
     }
 
     IpcHandler {

@@ -102,10 +102,11 @@ Singleton {
     }
 
     // ── animate or freeze ────────────────────────────────────────────
-    readonly property bool covered: pauseFullscreen && Hyprland.focusedWorkspace !== null && Hyprland.focusedWorkspace.hasFullscreen
+    readonly property bool covered: !!(pauseFullscreen && Hyprland.focusedWorkspace !== null && Hyprland.focusedWorkspace.hasFullscreen)
     readonly property bool playing: kind !== "image" && animate !== "never"
                                     && (animate === "always" || !UPower.onBattery)
                                     && !covered && !Lock.locked
+                                    || false
     property bool manualPause: false
     property string rendered: ""        // set by the front WallSlot: "<kind>:<live|still>:<file>"
     readonly property bool shouldPlay: playing && !manualPause

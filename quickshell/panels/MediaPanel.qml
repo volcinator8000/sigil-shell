@@ -22,7 +22,9 @@ PanelWindow {
         return ps.find(p => p.isPlaying) || ps.find(p => p.identity === "Spotify") || ps[0] || null;
     }
 
-    visible: Actions.mediaOpen
+    property real openness: Actions.mediaOpen ? 1 : 0
+    Behavior on openness { NumberAnimation { duration: Actions.mediaOpen ? Theme.dur(220) : Theme.dur(150); easing.type: Actions.mediaOpen ? Easing.OutCubic : Easing.InCubic } }
+    visible: Actions.mediaOpen || openness > 0.001
     anchors { top: atTop; bottom: !atTop; left: atLeft; right: !atLeft }
     margins { top: atTop ? Theme.bs(30) + 14 : 0; bottom: atTop ? 0 : 10; left: atLeft ? 10 : 0; right: atLeft ? 0 : 10 }
     implicitWidth: 320
@@ -32,7 +34,7 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "sigil-panel"
 
-    onVisibleChanged: if (visible) { entered = false; autoClose.restart(); }
+    Connections { target: Actions; function onMediaOpenChanged() { if (Actions.mediaOpen) { panel.entered = false; autoClose.restart(); } } }
     property bool entered: false
     Timer { id: autoClose; interval: 4000; onTriggered: if (!panel.entered) Actions.mediaOpen = false }
     Timer { id: leftCorner; interval: 450; onTriggered: if (!panel.entered) Actions.mediaOpen = false }
@@ -49,10 +51,9 @@ PanelWindow {
         border.width: 1
         border.color: Theme.line
 
-        opacity: Actions.mediaOpen ? 1 : 0
-        scale: Actions.mediaOpen ? 1 : 0.96
-        Behavior on opacity { NumberAnimation { duration: Theme.dur(180) } }
-        Behavior on scale { NumberAnimation { duration: Theme.dur(240); easing.type: Easing.OutBack } }
+        opacity: panel.openness
+        scale: 0.9 + 0.1 * panel.openness
+        transformOrigin: panel.atTop ? (panel.atLeft ? Item.TopLeft : Item.TopRight) : (panel.atLeft ? Item.BottomLeft : Item.BottomRight)
 
         HoverHandler {
             onHoveredChanged: {

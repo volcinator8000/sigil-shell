@@ -18,7 +18,9 @@ PanelWindow {
     property bool armed: false          // ignore the initial values at startup
 
     screen: Quickshell.screens.find(s => Hyprland.focusedMonitor !== null && s.name === Hyprland.focusedMonitor.name) || Quickshell.screens[0]
-    visible: shown || fade.running
+    property real openness: shown ? 1 : 0
+    Behavior on openness { NumberAnimation { duration: osd.shown ? Theme.dur(160) : Theme.dur(220); easing.type: osd.shown ? Easing.OutCubic : Easing.InCubic } }
+    visible: shown || openness > 0.001
     anchors.bottom: true
     margins.bottom: 64
     implicitWidth: 260
@@ -58,10 +60,9 @@ PanelWindow {
         color: Theme.rich ? Theme.alpha(Theme.s1, 0.85) : Theme.s1
         border.width: 1
         border.color: Theme.line
-        opacity: osd.shown ? 1 : 0
-        scale: osd.shown ? 1 : 0.92
-        Behavior on opacity { NumberAnimation { id: fade; duration: Theme.dur(160) } }
-        Behavior on scale { NumberAnimation { duration: Theme.dur(220); easing.type: Easing.OutBack } }
+        opacity: osd.openness
+        scale: 0.9 + 0.1 * osd.openness
+        transform: Translate { y: (1 - osd.openness) * 10 }
 
         Row {
             anchors { fill: parent; leftMargin: 16; rightMargin: 16 }

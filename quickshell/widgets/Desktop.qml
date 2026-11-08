@@ -20,7 +20,7 @@ Scope {
     // Behind windows
     PanelWindow {
         screen: root.screen
-        visible: !root.raised
+        visible: !root.raised && raisedWin.openness < 0.001
         anchors { top: true; bottom: true; left: true; right: true }
         color: "transparent"
         exclusionMode: ExclusionMode.Ignore
@@ -33,7 +33,9 @@ Scope {
     PanelWindow {
         id: raisedWin
         screen: root.screen
-        visible: root.raised
+        property real openness: root.raised ? 1 : 0
+        Behavior on openness { NumberAnimation { duration: root.raised ? Theme.dur(220) : Theme.dur(160); easing.type: root.raised ? Easing.OutCubic : Easing.InCubic } }
+        visible: root.raised || openness > 0.001
         anchors { top: true; bottom: true; left: true; right: true }
         color: "transparent"
         exclusionMode: ExclusionMode.Ignore
@@ -44,6 +46,7 @@ Scope {
         Rectangle {
             anchors.fill: parent
             color: Theme.alpha(Theme.bg, Widgets.editing ? 0.72 : 0.55)
+            opacity: raisedWin.openness
             focus: true
             Keys.onEscapePressed: { Widgets.editing = false; Widgets.peek = false; }
             MouseArea {
@@ -56,7 +59,7 @@ Scope {
         Canvas {
             anchors.fill: parent
             visible: Widgets.editing
-            opacity: 0.5
+            opacity: 0.5 * raisedWin.openness
             onVisibleChanged: if (visible) requestPaint()
             onPaint: {
                 const ctx = getContext("2d");
@@ -70,7 +73,13 @@ Scope {
             }
         }
 
-        WidgetCanvas { id: raisedCanvas; anchors.fill: parent; editing: Widgets.editing }
+        WidgetCanvas {
+            id: raisedCanvas
+            anchors.fill: parent
+            editing: Widgets.editing
+            opacity: raisedWin.openness
+            scale: 0.97 + 0.03 * raisedWin.openness
+        }
 
         // Raised from a hot corner: close once the pointer leaves the corner and the widgets.
         readonly property bool fromCorner: Widgets.peek && Widgets.peekCorner !== ""

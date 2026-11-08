@@ -35,7 +35,10 @@ Singleton {
     // ── power-aware effects ──────────────────────────────────────────
     readonly property bool onBattery: UPower.onBattery
     readonly property bool rich: effects === "full" || (effects === "auto" && !onBattery)
-    function dur(ms) { return rich ? ms : Math.round(ms * 0.4); }
+    // Animation length. On battery the expensive effects (blur, glow, animated wallpaper,
+    // fast sensor polling) are dropped; UI motion only gets slightly shorter, since a
+    // 200 ms transition costs next to nothing and cutting it makes panels pop.
+    function dur(ms) { return rich ? ms : Math.round(ms * 0.85); }
 
     // ── colours ──────────────────────────────────────────────────────
     property color bg: "#050507"

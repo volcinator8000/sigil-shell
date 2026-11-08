@@ -45,7 +45,16 @@ PanelWindow {
     Timer { interval: 2500; running: root.shown && root.cornerMode && !root.leaveArmed; onTriggered: if (!root.pointerInside) root.dismissed() }
     readonly property Item contentItem: holder
 
-    visible: shown || fade.running
+    // 0 = closed, 1 = open. Animated both ways; the surface stays mapped until it reaches 0,
+    // so closing plays out fully. Opening eases out, closing is quicker and eases in.
+    property real openness: shown ? 1 : 0
+    Behavior on openness {
+        NumberAnimation {
+            duration: root.shown ? Theme.dur(210) : Theme.dur(150)
+            easing.type: root.shown ? Easing.OutCubic : Easing.InCubic
+        }
+    }
+    visible: shown || openness > 0.001
     screen: Quickshell.screens.find(s => Hyprland.focusedMonitor !== null && s.name === Hyprland.focusedMonitor.name) || Quickshell.screens[0]
     anchors { top: true; bottom: true; left: true; right: true }
     color: "transparent"
@@ -58,8 +67,7 @@ PanelWindow {
         id: backdrop
         anchors.fill: parent
         color: Theme.alpha(Theme.bg, root.dim)
-        opacity: root.shown ? 1 : 0
-        Behavior on opacity { NumberAnimation { id: fade; duration: Theme.dur(170); easing.type: Easing.OutCubic } }
+        opacity: root.openness
         MouseArea { anchors.fill: parent; onClicked: root.dismissed() }
     }
 
@@ -77,8 +85,8 @@ PanelWindow {
     Item {
         id: holder
         anchors.fill: parent
-        opacity: backdrop.opacity
-        scale: (root.cornerMode ? 0.92 : 0.97) + (root.cornerMode ? 0.08 : 0.03) * backdrop.opacity
+        opacity: root.openness
+        scale: (root.cornerMode ? 0.9 : 0.96) + (root.cornerMode ? 0.1 : 0.04) * root.openness
         // grow out of the corner that opened it, or from the centre
         transformOrigin: !root.cornerMode ? Item.Center
                        : root.atTop ? (root.atLeft ? Item.TopLeft : Item.TopRight)

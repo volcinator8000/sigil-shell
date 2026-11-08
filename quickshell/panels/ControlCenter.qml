@@ -56,7 +56,7 @@ Overlay {
         HoverHandler { id: panelHover }
 
         // slide in from the right
-        transform: Translate { x: cc.shown ? 0 : ((cc.cornerMode && cc.atLeft) ? -30 : 30); Behavior on x { NumberAnimation { duration: Theme.dur(220); easing.type: Easing.OutCubic } } }
+        transform: Translate { x: (1 - cc.openness) * ((cc.cornerMode && cc.atLeft) ? -36 : 36) }
 
         Column {
             id: top
