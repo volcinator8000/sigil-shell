@@ -1,6 +1,6 @@
 pragma ComponentBehavior: Bound
 
-// Current lyric line in the bar, always visible while something plays.
+// Current lyric line in the bar, visible whenever the playing track has synced lyrics.
 // Data comes from the same script waybar used (~/.config/waybar/scripts/lyrics.py:
 // LRCLIB lookup, cache in ~/.cache/waybar-lyrics, one JSON line per second).
 // The script only runs while an MPRIS player exists.
@@ -24,10 +24,10 @@ Item {
     property string kind: "none"     // synced | paused | plain | none
     property string lastLine: ""
 
-    readonly property string track: player ? (player.trackTitle || "") : ""
     readonly property bool hasLyric: line.length > 0 && kind !== "none" && kind !== "plain"
 
-    visible: enabled_ && hasPlayer && (hasLyric || track.length > 0)
+    // only the lyric line; what is playing lives in the media corner
+    visible: enabled_ && hasPlayer && hasLyric
     implicitHeight: 20
     implicitWidth: visible ? Math.min(row.implicitWidth, maxWidth) : 0
     property real maxWidth: 560
@@ -61,21 +61,12 @@ Item {
             color: root.player && root.player.isPlaying ? Theme.a2 : Theme.dim
             font.pixelSize: 13
         }
-        // track title, short and dim
-        Label {
-            anchors.verticalCenter: parent.verticalCenter
-            visible: root.track.length > 0
-            width: Math.min(implicitWidth, 200)
-            elide: Text.ElideRight
-            text: root.track
-            color: Theme.dim
-        }
         // the lyric line, fades in when it changes
         Label {
             id: lyric
             anchors.verticalCenter: parent.verticalCenter
             visible: root.hasLyric
-            width: Math.min(implicitWidth, root.maxWidth - 230)
+            width: Math.min(implicitWidth, root.maxWidth - 24)
             elide: Text.ElideRight
             textFormat: Text.StyledText
             text: root.line
