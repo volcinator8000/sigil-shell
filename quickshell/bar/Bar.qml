@@ -59,6 +59,8 @@ PanelWindow {
 
             TrayItems { window: bar }
 
+            UpdatesButton { window: bar }
+
             StatusIcons {}
 
             Label {

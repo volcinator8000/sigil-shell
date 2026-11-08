@@ -271,16 +271,16 @@ PageView {
     Section {
         title: "Updates"
         SettingRow {
-            title: "Pending packages"; subtitle: page.updates
+            title: "Pending packages"
+            subtitle: Updates.checking ? "checking…" : Updates.upgrading ? "upgrading…"
+                    : Updates.state === "unknown" ? "not checked yet"
+                    : Updates.count ? Updates.count + " pending (repo " + Updates.repo + ", aur " + Updates.aur + ")" : "up to date"
             ActionButton {
                 text: "Check now"
-                onClicked: {
-                    Sh.run(["pkill", "-RTMIN+9", "-x", "waybar"]);
-                    Sh.toast("Checking for updates…");
-                    Sh.later(8000, () => page.updateText());
-                }
+                enabled: !Updates.checking
+                onClicked: { Updates.check(); Sh.toast("Checking for updates…"); }
             }
-            ActionButton { text: "Update"; accent: true; onClicked: Sh.spawn([Sh.updateNow]) }
+            ActionButton { text: "Update"; accent: true; enabled: !Updates.upgrading; onClicked: Updates.upgrade() }
         }
     }
 
