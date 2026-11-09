@@ -30,6 +30,25 @@ Overlay {
         { label: "Ultra saver", glyph: 0xF032A, state: "[ \"$(~/.local/bin/ultra state)\" = true ]",        on: "setsid -f ~/.local/bin/ultra on",      off: "setsid -f ~/.local/bin/ultra off" }
     ]
 
+    // translucent card on the sheet; children stack in a column inside the padding
+    component Card: Rectangle {
+        default property alias body: inner.data
+        property int pad: 12
+        property alias spacing: inner.spacing
+        implicitHeight: inner.implicitHeight + pad * 2
+        radius: Theme.radius
+        color: Theme.alpha(Theme.s2, Theme.rich ? 0.55 : 1)
+        border.width: 1
+        border.color: Theme.alpha(Theme.line, 0.9)
+        Column {
+            id: inner
+            anchors { left: parent.left; right: parent.right; top: parent.top; margins: parent.pad }
+            spacing: 10
+        }
+    }
+    // inner tile colour: a lift on top of the card
+    readonly property color tileColor: Theme.alpha(Theme.fg, 0.05)
+
     SystemClock { id: clock; precision: SystemClock.Minutes }
     FileView { id: uptimeFile; path: "/proc/uptime" }
     FileView { id: hostFile; path: "/etc/hostname" }
@@ -52,11 +71,14 @@ Overlay {
 
         Column {
             id: top
-            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 14 }
-            spacing: 12
+            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
+            spacing: 10
 
             // header
-            Item {
+            Card {
+              width: parent.width
+              pad: 10
+              Item {
                 width: parent.width
                 height: 34
                 Column {
@@ -78,7 +100,7 @@ Overlay {
                             required property var modelData
                             width: 30; height: 30
                             radius: Theme.radius * 0.7
-                            color: hov.hovered ? Theme.alpha(Theme.a1, 0.15) : Theme.s2
+                            color: hov.hovered ? Theme.alpha(Theme.a1, 0.15) : cc.tileColor
                             Label {
                                 anchors.centerIn: parent
                                 text: String.fromCodePoint(parent.modelData.g)
@@ -90,10 +112,15 @@ Overlay {
                         }
                     }
                 }
+              }
             }
 
             // toggle grid
-            Grid {
+            Card {
+              width: parent.width
+              Grid {
+                id: grid
+                width: parent.width
                 columns: 2
                 columnSpacing: 8
                 rowSpacing: 8
@@ -104,10 +131,10 @@ Overlay {
                         required property var modelData
                         property bool on: false
                         property bool busy: false
-                        width: (top.width - 8) / 2
+                        width: (grid.width - 8) / 2
                         height: 44
                         radius: Theme.radius * 0.8
-                        color: on ? Theme.alpha(Theme.a1, 0.16) : Theme.s2
+                        color: on ? Theme.alpha(Theme.a1, 0.16) : cc.tileColor
                         border.width: 1
                         border.color: on ? Theme.alpha(Theme.a1, 0.5) : "transparent"
                         opacity: busy ? 0.6 : 1
@@ -157,10 +184,13 @@ Overlay {
                         }
                     }
                 }
+              }
             }
 
             // sliders
-            SliderRow {
+            Card {
+              width: parent.width
+              SliderRow {
                 width: parent.width
                 glyph: Audio.icon(Audio.volume, Audio.muted)
                 value: Audio.volume
@@ -175,6 +205,7 @@ Overlay {
                 tint: Theme.a2
                 value: Brightness.value
                 onMoved: (v) => Brightness.set(v)
+              }
             }
 
             // media
@@ -183,11 +214,13 @@ Overlay {
                 readonly property var player: Players.active
                 visible: player !== null
                 width: parent.width
-                height: 64
-                radius: Theme.radius * 0.8
-                color: Theme.s2
+                height: 68
+                radius: Theme.radius
+                color: Theme.alpha(Theme.s2, Theme.rich ? 0.55 : 1)
+                border.width: 1
+                border.color: Theme.alpha(Theme.line, 0.9)
                 Row {
-                    anchors { fill: parent; margins: 8 }
+                    anchors { fill: parent; margins: 10 }
                     spacing: 10
                     Rectangle {
                         width: 48; height: 48
@@ -211,30 +244,43 @@ Overlay {
                     }
                 }
             }
+        }
 
-            // notifications header
-            Item {
-                width: parent.width
-                height: 24
-                Label {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "NOTIFICATIONS" + (Notifs.count ? " · " + Notifs.count : "") + (Notifs.historyGroups.length > 1 ? "  /  " + Notifs.historyGroups.length + " APPS" : "")
-                    color: Theme.dim
-                    font.pixelSize: 10
-                    font.letterSpacing: 1.4
-                }
-                Row {
-                    anchors { right: parent.right; verticalCenter: parent.verticalCenter }
-                    spacing: 6
-                    ChipButton { text: Notifs.dnd ? "do not disturb: on" : "do not disturb"; accent: Notifs.dnd; onClicked: Notifs.dnd = !Notifs.dnd }
-                    ChipButton { text: "clear"; visible: Notifs.count > 0; onClicked: Notifs.clearAll() }
+        // notifications card: fills the rest of the sheet
+        Rectangle {
+            id: notifCard
+            anchors { left: parent.left; right: parent.right; top: top.bottom; bottom: parent.bottom; margins: 12; topMargin: 10 }
+            radius: Theme.radius
+            color: Theme.alpha(Theme.s2, Theme.rich ? 0.55 : 1)
+            border.width: 1
+            border.color: Theme.alpha(Theme.line, 0.9)
+
+            Column {
+                id: notifHead
+                anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
+                // header
+                Item {
+                    width: parent.width
+                    height: 24
+                    Label {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "NOTIFICATIONS" + (Notifs.count ? " · " + Notifs.count : "") + (Notifs.historyGroups.length > 1 ? "  /  " + Notifs.historyGroups.length + " APPS" : "")
+                        color: Theme.dim
+                        font.pixelSize: 10
+                        font.letterSpacing: 1.4
+                    }
+                    Row {
+                        anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+                        spacing: 6
+                        ChipButton { text: Notifs.dnd ? "do not disturb: on" : "do not disturb"; accent: Notifs.dnd; onClicked: Notifs.dnd = !Notifs.dnd }
+                        ChipButton { text: "clear"; visible: Notifs.count > 0; onClicked: Notifs.clearAll() }
+                    }
                 }
             }
-        }
 
         ListView {
             id: hist
-            anchors { left: parent.left; right: parent.right; top: top.bottom; bottom: parent.bottom; margins: 14; topMargin: 8 }
+            anchors { left: parent.left; right: parent.right; top: notifHead.bottom; bottom: parent.bottom; margins: 12; topMargin: 8 }
             clip: true
             spacing: 8
             model: Notifs.historyGroups
@@ -260,6 +306,7 @@ Overlay {
                 text: "all clear"
                 color: Theme.dim
             }
+        }
         }
     }
 }

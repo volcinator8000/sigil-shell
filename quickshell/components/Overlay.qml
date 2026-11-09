@@ -130,7 +130,7 @@ PanelWindow {
             anchors.fill: parent
             preferredRendererType: Shape.CurveRenderer
             ShapePath {
-                fillColor: Theme.rich ? Theme.alpha(Theme.s1, 0.9) : Theme.s1
+                fillColor: Theme.rich ? Theme.alpha(Theme.s1, 0.78) : Theme.s1   // same as the bar
                 strokeColor: "transparent"
                 startX: sheetBg.px(0); startY: 0
                 PathLine { x: sheetBg.px(sheetBg.ww); y: 0 }
