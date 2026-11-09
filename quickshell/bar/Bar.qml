@@ -40,13 +40,23 @@ PanelWindow {
             Workspaces { monitorName: bar.screen ? bar.screen.name : "" }
 
             Label {
+                id: title
                 // window title gives way to the lyrics when something is playing
                 Layout.fillWidth: !lyrics.visible
                 Layout.maximumWidth: lyrics.visible ? 260 : -1
                 elide: Text.ElideRight
                 color: Theme.dim
                 font.pixelSize: Theme.bs(12)
-                text: Hyprland.activeToplevel ? (Hyprland.activeToplevel.title || "") : ""
+                // Some apps animate their title (terminal spinners, page loads): ~10 changes a
+                // second, each one a bar redraw. Show the newest title at most every 350 ms.
+                readonly property string live: Hyprland.activeToplevel ? (Hyprland.activeToplevel.title || "") : ""
+                text: live
+                onLiveChanged: {
+                    if (titleGate.running) return;
+                    text = live;
+                    titleGate.start();
+                }
+                Timer { id: titleGate; interval: 350; onTriggered: title.text = title.live }
             }
 
             Lyrics {

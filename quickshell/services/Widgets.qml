@@ -14,6 +14,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Hyprland
 
 Singleton {
     id: root
@@ -32,6 +33,11 @@ Singleton {
     property string peekCorner: ""    // corner that raised them ("" = key / clock click)
     property int selected: -1         // widget id highlighted from the settings page
     property bool ignoreNextChange: false
+
+    // Can anyone see the widgets right now? Raised (edit / peek), or no windows on the
+    // focused workspace. Widgets with live data only poll while this is true.
+    readonly property var ws: Hyprland.focusedWorkspace
+    readonly property bool desktopVisible: editing || peek || !ws || !ws.toplevels || ws.toplevels.values.length === 0
 
     // ── registry ─────────────────────────────────────────────────────
     FileView {

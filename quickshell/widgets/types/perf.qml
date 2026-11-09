@@ -11,8 +11,15 @@ Column {
     property var entry: ({})
     function o(k) { return Widgets.opt(entry, k); }
 
-    Component.onCompleted: Sys.users++
-    Component.onDestruction: Sys.users--
+    // sensors poll only while the desktop is in view (see Widgets.desktopVisible)
+    property bool counted: false
+    function sync() {
+        if (Widgets.desktopVisible && !counted) { Sys.users++; counted = true; }
+        else if (!Widgets.desktopVisible && counted) { Sys.users--; counted = false; }
+    }
+    Connections { target: Widgets; function onDesktopVisibleChanged() { root.sync(); } }
+    Component.onCompleted: sync()
+    Component.onDestruction: if (counted) Sys.users--
 
     WidgetHeader { width: root.w; title: "performance"; detail: Theme.rich ? "1s" : "4s · battery" }
 
