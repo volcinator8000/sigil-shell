@@ -28,7 +28,13 @@ PanelWindow {
     property color fill: Theme.rich ? Theme.alpha(Theme.s1, 0.78) : Theme.s1
     Behavior on fill { ColorAnimation { duration: Theme.dur(300) } }
 
-    // one path for bar + both fillets, so the translucent fill has no seams
+    // one path for bar + both fillets, so the translucent fill has no seams.
+    // While a side sheet is open (Actions.sheetLeft/Right = its width on screen) the bar
+    // gives up that corner and its hairline there, so bar and sheet read as one surface.
+    readonly property real sL: Actions.sheetLeft
+    readonly property real sR: Actions.sheetRight
+    readonly property real rL: Math.max(0.01, fillet - sL)
+    readonly property real rR: Math.max(0.01, fillet - sR)
     Shape {
         anchors.fill: parent
         preferredRendererType: Shape.CurveRenderer
@@ -37,10 +43,10 @@ PanelWindow {
             strokeColor: "transparent"
             startX: 0; startY: 0
             PathLine { x: bar.width; y: 0 }
-            PathLine { x: bar.width; y: bar.barH + bar.fillet }
-            PathArc { x: bar.width - bar.fillet; y: bar.barH; radiusX: bar.fillet; radiusY: bar.fillet; direction: PathArc.Counterclockwise }
-            PathLine { x: bar.fillet; y: bar.barH }
-            PathArc { x: 0; y: bar.barH + bar.fillet; radiusX: bar.fillet; radiusY: bar.fillet; direction: PathArc.Counterclockwise }
+            PathLine { x: bar.width; y: bar.barH + bar.rR }
+            PathArc { x: bar.width - bar.rR; y: bar.barH; radiusX: bar.rR; radiusY: bar.rR; direction: PathArc.Counterclockwise }
+            PathLine { x: bar.rL; y: bar.barH }
+            PathArc { x: 0; y: bar.barH + bar.rL; radiusX: bar.rL; radiusY: bar.rL; direction: PathArc.Counterclockwise }
             PathLine { x: 0; y: 0 }
         }
         // hairline along the lower contour only
@@ -48,10 +54,11 @@ PanelWindow {
             fillColor: "transparent"
             strokeColor: Theme.line
             strokeWidth: 1
-            startX: bar.width - 0.5; startY: bar.barH + bar.fillet
-            PathArc { x: bar.width - bar.fillet; y: bar.barH - 0.5; radiusX: bar.fillet - 0.5; radiusY: bar.fillet - 0.5; direction: PathArc.Counterclockwise }
-            PathLine { x: bar.fillet; y: bar.barH - 0.5 }
-            PathArc { x: 0.5; y: bar.barH + bar.fillet; radiusX: bar.fillet - 0.5; radiusY: bar.fillet - 0.5; direction: PathArc.Counterclockwise }
+            startX: bar.sR > 0 ? bar.width - bar.sR : bar.width - 0.5
+            startY: bar.sR > 0 ? bar.barH - 0.5 : bar.barH + bar.fillet
+            PathArc { x: bar.sR > 0 ? bar.width - bar.sR : bar.width - bar.fillet; y: bar.barH - 0.5; radiusX: bar.fillet - 0.5; radiusY: bar.fillet - 0.5; direction: PathArc.Counterclockwise }
+            PathLine { x: bar.sL > 0 ? bar.sL : bar.fillet; y: bar.barH - 0.5 }
+            PathArc { x: bar.sL > 0 ? bar.sL : 0.5; y: bar.sL > 0 ? bar.barH - 0.5 : bar.barH + bar.fillet; radiusX: bar.fillet - 0.5; radiusY: bar.fillet - 0.5; direction: PathArc.Counterclockwise }
         }
     }
 
@@ -59,6 +66,11 @@ PanelWindow {
         id: frame
         anchors { left: parent.left; right: parent.right; top: parent.top }
         height: bar.barH
+        // where the pointer is on the bar (a corner-opened sheet stays open while it is over the sheet's span)
+        HoverHandler {
+            onHoveredChanged: if (!hovered) Actions.barHoverX = -1
+            onPointChanged: if (hovered) Actions.barHoverX = point.position.x
+        }
 
         RowLayout {
             anchors { fill: parent; leftMargin: Theme.bs(10); rightMargin: Theme.bs(12) }

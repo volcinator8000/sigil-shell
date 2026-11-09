@@ -64,9 +64,17 @@ PanelWindow {
         if (shown) corner = requestedCorner;
     }
     onVisibleChanged: if (!visible) corner = ""
-    Timer { id: leaveTimer; interval: 300; onTriggered: if (root.shown && root.cornerMode && !root.panelHovered && !Actions.cornerInside[root.corner]) root.dismissed() }
+    // the bar strip right above a side sheet counts as part of it
+    readonly property bool overBar: sheet && Actions.barHoverX >= 0
+        && (atLeft ? Actions.barHoverX <= width : Actions.barHoverX >= (screen ? screen.width : 1920) - width)
+    readonly property bool pointerHome: panelHovered || overBar || !!Actions.cornerInside[corner]
+    onOverBarChanged: {
+        if (overBar || !shown || !cornerMode || panelHovered) return;
+        if (leaveArmed) leaveTimer.restart(); else cornerTimer.restart();
+    }
+    Timer { id: leaveTimer; interval: 600; onTriggered: if (root.shown && root.cornerMode && !root.pointerHome) root.dismissed() }
     // only close if the pointer really is out of the corner (exit events can be spurious)
-    Timer { id: cornerTimer; interval: 450; onTriggered: if (root.shown && root.cornerMode && !root.leaveArmed && !root.panelHovered && !Actions.cornerInside[root.corner]) root.dismissed() }
+    Timer { id: cornerTimer; interval: 800; onTriggered: if (root.shown && root.cornerMode && !root.leaveArmed && !root.pointerHome) root.dismissed() }
     Connections {
         target: Actions
         function onCornerExited(c) { if (root.shown && c === root.corner && !root.leaveArmed) cornerTimer.restart(); }
@@ -75,11 +83,18 @@ PanelWindow {
     property real openness: shown ? 1 : 0
     Behavior on openness {
         NumberAnimation {
-            duration: root.sheet ? (root.shown ? Theme.dur(320) : Theme.dur(220)) : (root.shown ? Theme.dur(200) : Theme.dur(140))
-            easing.type: root.sheet ? (root.shown ? Easing.OutQuint : Easing.InCubic) : (root.shown ? Easing.OutCubic : Easing.InCubic)
+            duration: root.sheet ? (root.shown ? Theme.dur(340) : Theme.dur(300)) : (root.shown ? Theme.dur(200) : Theme.dur(140))
+            easing.type: root.sheet ? (root.shown ? Easing.OutQuint : Easing.InOutCubic) : (root.shown ? Easing.OutCubic : Easing.InCubic)
         }
     }
     visible: shown || openness > 0.001
+
+    // tell the bar how much of its edge the sheet covers
+    readonly property real span: sheet && visible ? openness * (panelWidth + fillet) : 0
+    onSpanChanged: if (sheet) {
+        Actions.sheetLeft = atLeft ? span : 0;
+        Actions.sheetRight = atLeft ? 0 : span;
+    }
 
     screen: Quickshell.screens.find(s => Hyprland.focusedMonitor !== null && s.name === Hyprland.focusedMonitor.name) || Quickshell.screens[0]
     color: "transparent"
