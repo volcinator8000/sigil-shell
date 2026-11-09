@@ -49,6 +49,8 @@ Singleton {
         printErrors: false
         onLoaded: root.ultra = true
     }
+    // bar + side sheets: one surface colour, opaque enough to look the same over any background
+    readonly property color surface: rich ? alpha(s1, 0.94) : s1
     readonly property bool rich: !ultra && (effects === "full" || (effects === "auto" && !onBattery))
     // Animation length. On battery the expensive effects (blur, glow, animated wallpaper,
     // fast sensor polling) are dropped; UI motion only gets slightly shorter, since a

@@ -118,7 +118,9 @@ PanelWindow {
     }
     implicitWidth: panelWidth + (sheet ? fillet : 0)
     // the fillet strip outside the sheet must not eat clicks
-    mask: Region { item: panel }
+    // (an untransformed twin of the panel: a Region does not follow the slide transform,
+    //  so tracking `panel` left the input area where the sheet was before it slid in)
+    mask: Region { item: hitArea }
     implicitHeight: panelHeight
 
     // click outside → close. Not in corner mode: there the panel closes when the pointer
@@ -145,7 +147,7 @@ PanelWindow {
             anchors.fill: parent
             preferredRendererType: Shape.CurveRenderer
             ShapePath {
-                fillColor: Theme.rich ? Theme.alpha(Theme.s1, 0.78) : Theme.s1   // same as the bar
+                fillColor: Theme.surface   // same as the bar
                 strokeColor: "transparent"
                 startX: sheetBg.px(0); startY: 0
                 PathLine { x: sheetBg.px(sheetBg.ww); y: 0 }
@@ -170,6 +172,11 @@ PanelWindow {
     QtObject {
         id: slide
         readonly property real x: root.sheet ? (1 - root.openness) * root.width * (root.atLeft ? -1 : 1) : 0
+    }
+
+    Item {
+        id: hitArea
+        x: panel.x; y: panel.y; width: panel.width; height: panel.height
     }
 
     Item {

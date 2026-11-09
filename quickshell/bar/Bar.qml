@@ -25,7 +25,7 @@ PanelWindow {
     WlrLayershell.namespace: "sigil-bar"
     WlrLayershell.layer: WlrLayer.Top
 
-    property color fill: Theme.rich ? Theme.alpha(Theme.s1, 0.78) : Theme.s1
+    property color fill: Theme.surface
     Behavior on fill { ColorAnimation { duration: Theme.dur(300) } }
 
     // one path for bar + both fillets, so the translucent fill has no seams.

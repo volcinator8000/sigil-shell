@@ -37,9 +37,9 @@ Overlay {
         property alias spacing: inner.spacing
         implicitHeight: inner.implicitHeight + pad * 2
         radius: Theme.radius
-        color: Theme.alpha(Theme.s2, Theme.rich ? 0.55 : 1)
+        color: cc.cardColor
         border.width: 1
-        border.color: Theme.alpha(Theme.line, 0.9)
+        border.color: cc.cardBorder
         Column {
             id: inner
             anchors { left: parent.left; right: parent.right; top: parent.top; margins: parent.pad }
@@ -48,6 +48,9 @@ Overlay {
     }
     // inner tile colour: a lift on top of the card
     readonly property color tileColor: Theme.alpha(Theme.fg, 0.05)
+    // cards: a faint neutral lift of the sheet colour, so they keep the palette's hue
+    readonly property color cardColor: Theme.alpha(Theme.fg, 0.035)
+    readonly property color cardBorder: Theme.alpha(Theme.fg, 0.07)
 
     SystemClock { id: clock; precision: SystemClock.Minutes }
     FileView { id: uptimeFile; path: "/proc/uptime" }
@@ -216,9 +219,9 @@ Overlay {
                 width: parent.width
                 height: 68
                 radius: Theme.radius
-                color: Theme.alpha(Theme.s2, Theme.rich ? 0.55 : 1)
+                color: cc.cardColor
                 border.width: 1
-                border.color: Theme.alpha(Theme.line, 0.9)
+                border.color: cc.cardBorder
                 Row {
                     anchors { fill: parent; margins: 10 }
                     spacing: 10
@@ -251,9 +254,9 @@ Overlay {
             id: notifCard
             anchors { left: parent.left; right: parent.right; top: top.bottom; bottom: parent.bottom; margins: 12; topMargin: 10 }
             radius: Theme.radius
-            color: Theme.alpha(Theme.s2, Theme.rich ? 0.55 : 1)
+            color: cc.cardColor
             border.width: 1
-            border.color: Theme.alpha(Theme.line, 0.9)
+            border.color: cc.cardBorder
 
             Column {
                 id: notifHead
