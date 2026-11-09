@@ -64,13 +64,6 @@ PanelWindow {
             anchors { fill: parent; leftMargin: Theme.bs(10); rightMargin: Theme.bs(12) }
             spacing: Theme.bs(14)
 
-            Label {
-                text: "◆"
-                color: Theme.a1
-                font.bold: true
-                font.pixelSize: Theme.bs(13)
-            }
-
             Workspaces { monitorName: bar.screen ? bar.screen.name : "" }
 
             Label {
