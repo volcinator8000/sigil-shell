@@ -7,8 +7,8 @@ PartOf=graphical-session.target
 After=graphical-session.target
 ConditionEnvironment=WAYLAND_DISPLAY
 # a shell that crashes on start would otherwise loop forever
-StartLimitIntervalSec=120
-StartLimitBurst=6
+StartLimitIntervalSec=60
+StartLimitBurst=12
 
 [Service]
 Type=simple
