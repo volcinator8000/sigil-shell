@@ -1,0 +1,12 @@
+#!/bin/bash
+# sigil-keepawake: idle inhibitor for the control center's "Keep awake" toggle.
+# Usage: sigil-keepawake [on|off|toggle|state]
+# (also matches inhibitors started under the old "SwayNC" name)
+PAT="systemd-inhibit.*--who=(sigil-keepawake|SwayNC)"
+running() { pgrep -f "$PAT" >/dev/null; }
+case "${1:-toggle}" in
+    state)  running && echo true || echo false ;;
+    on)     running || setsid -f systemd-inhibit --what=idle --who=sigil-keepawake --why="Keep awake (control center)" sleep infinity </dev/null >/dev/null 2>&1 ;;
+    off)    pkill -f "$PAT" ;;
+    toggle) if running; then "$0" off; else "$0" on; fi ;;
+esac

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Session plumbing shared by sigil-session (login) and sigil-switch.
-#   sigil-units env       copy Hyprland's environment into the systemd user manager, so services
-#                         (and apps they start) get the same cursor / Qt / GTK / PATH settings
-#   sigil-units link      link this repo's units into ~/.config/systemd/user (daemon-reload if new)
-#   sigil-units sigil     hand the session to sigil-shell (block swaync, start the service + health timer)
-#   sigil-units legacy    stop sigil-shell, unblock swaync
+# Session plumbing for sigil-shell (used by sigil-session at login, `sigil restart` and sigil-health).
+#   sigil-units env     copy Hyprland's environment into the systemd user manager, so services
+#                       (and apps they start) get the same cursor / Qt / GTK / PATH settings
+#   sigil-units link    link this repo's units into ~/.config/systemd/user (daemon-reload if new)
+#   sigil-units start   (re)start the shell service and the health timer; keeps the old daemons
+#                       the shell replaces (swaync, hyprpolkitagent, hyprpaper) out of the way
 set -u
 REPO="$(dirname "$(dirname "$(realpath "$0")")")"
 UD="$HOME/.config/systemd/user"
@@ -33,13 +33,15 @@ case "${1:-}" in
         command -v dbus-update-activation-environment >/dev/null && dbus-update-activation-environment $set 2>/dev/null
         ;;
     link) link ;;
-    sigil)
+    start|sigil)
         link
-        # D-Bus would otherwise start swaync whenever the shell is briefly away (restart, crash)
-        # and it would keep the notification name. Runtime mask = until reboot or `legacy`.
-        sc mask --runtime swaync.service
-        sc stop swaync.service hyprpolkitagent.service
-        pkill -x swaync 2>/dev/null
+        # If any of these is still installed, D-Bus or a leftover autostart could start it and it
+        # would grab the notification name / polkit agent slot. Masked until unmasked by hand.
+        for u in swaync.service hyprpolkitagent.service hyprpaper.service waybar.service; do
+            [ "$(systemctl --user is-enabled "$u" 2>/dev/null)" = masked ] || sc mask "$u"
+        done
+        sc stop swaync.service hyprpolkitagent.service hyprpaper.service waybar.service
+        pkill -x swaync 2>/dev/null; pkill -x waybar 2>/dev/null; pkill -x hyprpaper 2>/dev/null
         # a shell started by hand (old way) would hold the IPC socket and the D-Bus names
         if pgrep -x 'qs|quickshell' >/dev/null && ! systemctl --user is-active -q sigil-shell; then
             qs kill -c sigil >/dev/null 2>&1
@@ -50,11 +52,5 @@ case "${1:-}" in
         sc restart sigil-shell.service
         sc enable --now sigil-health.timer
         ;;
-    legacy)
-        sc stop sigil-shell.service
-        qs kill -c sigil >/dev/null 2>&1
-        sc unmask --runtime swaync.service
-        link; sc enable --now sigil-health.timer
-        ;;
-    *) echo "usage: sigil-units env|link|sigil|legacy" >&2; exit 1 ;;
+    *) echo "usage: sigil-units env|link|start" >&2; exit 1 ;;
 esac

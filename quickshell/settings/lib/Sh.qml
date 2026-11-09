@@ -18,20 +18,17 @@ Singleton {
     readonly property string cfg: home + "/.config"
     readonly property string ks: cfg + "/keysound"
     readonly property string ksSh: ks + "/keysound.sh"
-    readonly property string keepAwake: cfg + "/swaync/keepawake.sh"
-    readonly property string nightLight: cfg + "/swaync/nightlight.sh"
+    readonly property string keepAwake: home + "/.local/bin/sigil-keepawake"
+    readonly property string nightLight: home + "/.local/bin/sigil-nightlight"
     readonly property string hypridle: cfg + "/hypr/hypridle.conf"
     readonly property string lockSh: cfg + "/hypr/scripts/lock.sh"
     readonly property string ultra: home + "/.local/bin/ultra"
-    readonly property string hyprpaper: cfg + "/hypr/hyprpaper.conf"
-    readonly property string hyprlock: cfg + "/hypr/hyprlock.conf"
     readonly property string hyprsunset: cfg + "/hypr/hyprsunset.conf"
     readonly property string localLua: cfg + "/hypr/local.lua"
     readonly property string tabletLua: cfg + "/hypr/tablet.lua"
     readonly property string powerAuto: cfg + "/hypr/power-auto.conf"
     readonly property string walls: home + "/Pictures/Wallpapers"
-    readonly property string updateNow: cfg + "/waybar/scripts/update-now.sh"
-    readonly property string pyApp: cfg + "/sigil-settings/sigil-settings.py"
+    readonly property string updateNow: home + "/.local/bin/sigil-update-now"
 
     signal toastRequested(string message)
     function toast(msg: string): void { toastRequested(msg); }

@@ -22,11 +22,7 @@ PageView {
 
     function refresh() {
         loading = true;
-        const py = "import importlib.util, json, sys\n"
-                 + "spec = importlib.util.spec_from_file_location('sigil_settings', sys.argv[1])\n"
-                 + "m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\n"
-                 + "print(json.dumps(m.TabletPage.detect()))";
-        Sh.run(["python3", "-c", py, Sh.pyApp], o => {
+        Sh.run([Sh.home + "/.local/bin/sigil-tablet-detect"], o => {
             try { page.tab = JSON.parse(o.split("\n").pop() || "null"); } catch (e) { page.tab = null; }
             page.loading = false;
         }, 15);

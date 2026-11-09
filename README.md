@@ -16,7 +16,7 @@ and changes apply live.
   Bruise, Static and Patina. Templates push the active palette to other apps (kitty for now).
 - **Power-aware effects**: full blur, glow and animation on AC. On battery, animations
   get shorter and sensors refresh less often.
-- **Replaces the whole stack**, with the old tools kept for switching back:
+- **Replaces the whole stack**:
 
   | sigil-shell | replaces |
   |---|---|
@@ -29,7 +29,7 @@ and changes apply live.
   | polkit dialog | hyprpolkitagent |
   | settings window | sigil-settings (GTK) |
 
-- **Safe to try**: one command switches between this and your previous setup.
+- **Stays up by itself**: systemd service, crash restarts, a health check every minute.
 
 ## Install
 
@@ -53,39 +53,40 @@ pcall(dofile, os.getenv("HOME") .. "/sigil-shell/hypr/sigil.lua")
 globinclude sigil-colors.conf
 ```
 
-## Switching
+## Commands
 
 | command | what it does |
 |---|---|
-| `sigil-switch sigil` | takes a snapper snapshot of /home (if configured), stops waybar, starts sigil-shell |
-| `sigil-switch legacy` | stops sigil-shell, deletes generated colour files, starts waybar |
-| `sigil-switch toggle` | flips between the two. Also bound to **SUPER+CTRL+SHIFT+B** |
-| `sigil-switch status` | current mode and what is running |
-| `sigil-switch palette patina` | change palette |
-| `sigil-switch test-lock` | show the lock screen for 6 s; it unlocks by itself |
+| `sigil status` | shell, health check, palette, helper services |
+| `sigil restart` | restart the shell. Also **SUPER+CTRL+SHIFT+B** |
+| `sigil palette patina` | change palette |
+| `sigil test-lock` | show the lock screen for 6 s; it unlocks by itself |
+| `sigil health` | run the health check now, with details |
+| `sigil logs` | follow the shell's log |
 
-Keybinds and autostart lines call `sigil-do <action>` (launcher, emoji, clipboard,
-controlcenter, power, lock, settings, overview, notifd, polkitd, wallpaperd). It runs the
-sigil-shell version in sigil mode and the original tool otherwise. If the shell is not
-running, it falls back to the original. `sigil-do lock` uses hyprlock if the sigil lock
-has not engaged within 2 s, and `hypr/sigil.lua` enables `misc:allow_session_lock_restore`.
+Keybinds, hypridle and scripts call `sigil-do <action>` (launcher, emoji, clipboard,
+controlcenter, power, lock, settings, overview, media, dashboard). If the shell isn't
+answering it starts it first. `sigil-do lock` falls back to hyprlock if the sigil lock has
+not engaged within 2 s, and `hypr/sigil.lua` enables `misc:allow_session_lock_restore`.
 
-The choice is remembered in `~/.config/sigil/mode` and used at the next login.
+Other helpers in `bin/`: `sigil-updates` / `sigil-update-now` (pending packages, upgrade
+window), `sigil-keepawake`, `sigil-nightlight` (hyprsunset schedule + override),
+`sigil-battery` (one-line status), `sigil-tablet-detect`, `sigil-apply` (palette templates).
 
 ## Staying up
 
 - `sigil-shell.service` (systemd user unit) runs the shell. Quickshell relaunches its own shell
   process after a crash; systemd restarts the whole thing if that fails too. Apps opened from the
   launcher and the upgrade window get their own scope, so a shell restart never closes them.
-- In sigil mode swaync is masked until reboot (`--runtime`), so D-Bus can't hand it the
-  notification name while the shell restarts. `sigil-switch legacy` unmasks it.
+- The daemons it replaces (swaync, hyprpolkitagent, hyprpaper, waybar) are masked if still
+  installed, so D-Bus can't hand one of them the notification name while the shell restarts.
 - `sigil-health` (timer, every minute, ~0.1 s CPU) restarts the shell if it is down, frozen, lost
   the notification name or its PipeWire connection; restarts WirePlumber/PipeWire when only
   "Dummy Output" is left; and notifies you if the session bus or PipeWire get close to their
   1024 open-file limit (naming the programs holding the most connections).
   Log: `journalctl --user -u sigil-health`, or run `sigil-health -v`.
-- `sigil-units env|link|sigil|legacy` does the plumbing (copy Hyprland's environment into
-  systemd, link the units, hand the session over).
+- `sigil-units env|link|start` does the plumbing (copy Hyprland's environment into
+  systemd, link the units, start the shell).
 
 ## Wallpapers
 
@@ -100,8 +101,6 @@ muted, via QtMultimedia + ffmpeg). Needs `qt6-multimedia-ffmpeg` and `kimageform
   (every N minutes from a folder, shuffled or in order); `schedule`
   (`[{"at": "07:00", "path": "file or folder"}, …]`, where the latest slot at or before now wins).
 - IPC: `qs -c sigil ipc call wallpaper next|prev|set <path>|pause|status`.
-- `sigil-switch legacy` hands hyprpaper the still frame and restores the moving
-  wallpaper on the way back.
 
 ## Keys
 
@@ -142,7 +141,7 @@ quickshell/
   widgets/               widget layer + types/<name>.qml (one file per widget)
   palettes/*.json        palette definitions
 templates/*.tmpl         app colour templates (header says target file + reload command)
-bin/                     sigil-switch, sigil-session, sigil-apply, sigil-units, sigil-health
+bin/                     sigil, sigil-do, sigil-session, sigil-units, sigil-health, sigil-apply, helpers
 systemd/                 sigil-shell.service, sigil-health.{service,timer}
 hypr/sigil.lua           layer blur rules and keybinds
 ```

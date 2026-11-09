@@ -7,6 +7,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
+import qs.services
 import "bar"
 import "corners"
 import "widgets"
@@ -14,6 +15,8 @@ import "panels"
 import "settings"
 
 ShellRoot {
+    // singletons start when first used; these run in the background and have no UI of their own
+    readonly property var services: [PowerAuto.enabled, Players.active]
     Variants {
         model: Quickshell.screens
         delegate: Scope {

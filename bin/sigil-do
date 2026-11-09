@@ -1,46 +1,27 @@
 #!/usr/bin/env bash
-# One entry point for keybinds and autostart lines, so they work in both modes.
-#   sigil mode  → the sigil-shell component (via Quickshell IPC)
-#   legacy mode → the original tool (rofi, swaync, wlogout, hyprlock, …)
-# If sigil mode is selected but the shell is not running, the legacy tool is used.
+# One entry point for keybinds, hypridle and scripts: forwards an action to sigil-shell.
 #
-#   sigil-do launcher|emoji|clipboard|controlcenter|power|lock|settings|overview
-#   sigil-do notifd|polkitd|wallpaperd     (autostart: start the legacy daemon only in legacy mode)
+#   sigil-do launcher|emoji|clipboard|controlcenter|power|lock|settings|overview|media|dashboard
+#
+# If the shell is not answering it is (re)started first. `lock` never leaves the machine
+# open: if the shell's lock screen has not engaged within 2 s, hyprlock locks instead.
 
 action="${1:?usage: sigil-do <action>}"
-mode=$(cat "$HOME/.config/sigil/mode" 2>/dev/null || echo legacy)
-KS="$HOME/.config/keysound/keysound.sh"
+ipc() { timeout 3 qs -c sigil ipc call "$@"; }
+up() { timeout 3 qs -c sigil ipc show >/dev/null 2>&1; }
 
-# Daemons: decided by the mode alone (at login the shell may not be up yet).
-case "$action" in
-    notifd|polkitd|wallpaperd) [ "$mode" = sigil ] && exit 0 ;;
-esac
-
-sigil_up() { [ "$mode" = sigil ] && qs -c sigil ipc show >/dev/null 2>&1; }
-ipc() { qs -c sigil ipc call "$@"; }
-
-if sigil_up; then
-    case "$action" in
-        lock)
-            ipc lock lock >/dev/null
-            # Never leave the machine unlocked: if the shell did not lock within 2 s, fall back to hyprlock.
-            for _ in 1 2 3 4; do sleep 0.5; [ "$(ipc lock isLocked 2>/dev/null)" = true ] && exit 0; done
-            exec "$HOME/.config/hypr/scripts/lock.sh" ;;
-        *) exec qs -c sigil ipc call shell run "$action" ;;
-    esac
+if ! up; then
+    systemctl --user reset-failed sigil-shell.service >/dev/null 2>&1
+    systemctl --user start sigil-shell.service >/dev/null 2>&1
+    for _ in $(seq 1 12); do up && break; sleep 0.25; done
 fi
 
 case "$action" in
-    launcher)      "$KS" play open 2>/dev/null; exec rofi -show drun ;;
-    emoji)         "$KS" play open 2>/dev/null; exec rofi -show emoji ;;
-    clipboard)     exec "$HOME/.config/rofi/clip.sh" ;;
-    controlcenter|notifications) "$KS" play open 2>/dev/null; exec swaync-client -t -sw ;;
-    power)         "$KS" play open 2>/dev/null; exec wlogout --protocol layer-shell ;;
-    lock)          exec "$HOME/.config/hypr/scripts/lock.sh" ;;
-    settings)      exec python3 "$HOME/.config/sigil-settings/sigil-settings.py" --toggle ;;
-    overview)      exec pkill -SIGUSR1 hyprexpose ;;
-    notifd)        exec systemctl --user start swaync ;;
-    polkitd)       exec systemctl --user start hyprpolkitagent ;;
-    wallpaperd)    exec hyprpaper ;;
-    *) echo "sigil-do: unknown action $action" >&2; exit 1 ;;
+    lock)
+        ipc lock lock >/dev/null 2>&1
+        for _ in 1 2 3 4; do sleep 0.5; [ "$(ipc lock isLocked 2>/dev/null)" = true ] && exit 0; done
+        # emergency fallback (the wrapper also clears a hung hyprlock that would block locking)
+        [ -x "$HOME/.config/hypr/scripts/lock.sh" ] && exec "$HOME/.config/hypr/scripts/lock.sh"
+        exec hyprlock ;;
+    *)  exec timeout 5 qs -c sigil ipc call shell run "$action" ;;
 esac

@@ -61,6 +61,22 @@ PanelWindow {
 
             UpdatesButton { window: bar }
 
+            // ultra power saver is on: click to leave it
+            Label {
+                visible: Theme.ultra
+                text: String.fromCodePoint(0xF032A) + " ULTRA"
+                color: Theme.warn
+                font.bold: true
+                font.letterSpacing: 1
+                font.pixelSize: Theme.bs(11)
+                MouseArea {
+                    anchors.fill: parent
+                    anchors.margins: -4
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: Quickshell.execDetached([Theme.home + "/.local/bin/ultra", "off"])
+                }
+            }
+
             StatusIcons {}
 
             Label {

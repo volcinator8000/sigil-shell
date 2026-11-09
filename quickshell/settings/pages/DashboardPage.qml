@@ -48,7 +48,7 @@ PageView {
         Sh.sh('head -1 /proc/stat; echo @@; cat /proc/loadavg; echo @@; cat /proc/meminfo; echo @@; '
             + 'b=$(ls -d /sys/class/power_supply/BAT* 2>/dev/null | sort | head -1); '
             + 'if [ -n "$b" ]; then cat "$b/capacity"; cat "$b/status"; cat "$b/power_now" 2>/dev/null || echo 0; fi; echo @@; '
-            + 'cat /proc/uptime; echo @@; cat "$XDG_RUNTIME_DIR/waybar-updates.json" 2>/dev/null; echo @@; '
+            + 'cat /proc/uptime; echo @@; cat "$XDG_RUNTIME_DIR/sigil-updates.json" 2>/dev/null; echo @@; '
             + 'p=$(cat /sys/firmware/acpi/platform_profile 2>/dev/null); [ -n "$p" ] || p=$(cat "$XDG_RUNTIME_DIR/ppd-profile" 2>/dev/null); echo "$p"; echo @@; '
             + 'if [ -n "$1" ]; then cat "$1/power/runtime_status" 2>/dev/null; echo; cat "$1/power/control" 2>/dev/null; fi',
               out => page.parse(out.split(/^@@$/m).map(x => x.replace(/^\n/, "")), gpu !== ""), 5, [gpu]);
@@ -109,7 +109,7 @@ PageView {
             up.value = Math.floor(secs / 3600) + "h " + String(Math.floor(secs % 3600 / 60)).padStart(2, "0") + "m";
             up.sub = "since " + Qt.formatDateTime(new Date(Date.now() - secs * 1000), "ddd HH:mm");
         }
-        // updates cache (written by the bar's updates module)
+        // updates cache (written by sigil-updates)
         try {
             const d = JSON.parse((s[5] || "").trim() || "{}");
             const n = String(d.text || "").replace(/\D/g, "") || "0";
@@ -159,12 +159,12 @@ PageView {
             ActionButton { text: "Lock now"; onClicked: Sh.spawn(["loginctl", "lock-session"]) }
         }
         SettingRow {
-            title: "Session"; subtitle: "power menu / log out (sigil-do power: the shell's menu, or wlogout in legacy mode)"
-            ActionButton { text: "Power menu"; onClicked: Sh.sh('d="$HOME/.local/bin/sigil-do"; if [ -x "$d" ]; then exec "$d" power; else exec bash "$HOME/sigil-shell/bin/sigil-do" power; fi') }
+            title: "Session"; subtitle: "power menu: lock, log out, suspend, reboot, shut down"
+            ActionButton { text: "Power menu"; onClicked: Actions.run("power") }
         }
         SettingRow {
-            title: "Control center"; subtitle: "notifications and toggles (sigil-do controlcenter)"
-            ActionButton { text: "Open"; onClicked: Sh.sh('d="$HOME/.local/bin/sigil-do"; if [ -x "$d" ]; then exec "$d" controlcenter; else exec bash "$HOME/sigil-shell/bin/sigil-do" controlcenter; fi') }
+            title: "Control center"; subtitle: "notifications and toggles"
+            ActionButton { text: "Open"; onClicked: Actions.run("controlcenter") }
         }
     }
 }

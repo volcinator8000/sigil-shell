@@ -2,7 +2,7 @@
 # sigil-health: run every minute by sigil-health.timer. Fixes what a plain "restart on crash"
 # can't see, and warns early about the kind of leak that took the session down on 2026-11-08.
 #
-#   shell   (sigil mode) service down, IPC frozen, notifications taken by someone else,
+#   shell   service down, IPC frozen, notifications taken by someone else,
 #           or disconnected from PipeWire  → restart sigil-shell
 #   audio   sound cards present but only "Dummy Output" left → restart WirePlumber, then PipeWire
 #   leaks   session D-Bus / PipeWire close to their 1024 open-file limit, or one program with
@@ -13,7 +13,6 @@
 set -u
 VERBOSE=0; [ "${1:-}" = "-v" ] && VERBOSE=1
 ST="${XDG_RUNTIME_DIR:-/tmp}/sigil-health"; mkdir -p "$ST"
-MODE=$(cat "$HOME/.config/sigil/mode" 2>/dev/null || echo legacy)
 now=$(date +%s)
 
 log()  { echo "$*"; }
@@ -33,12 +32,12 @@ pid_of() { awk -v n="$1" '$2 == n { print $1; exit }' <<<"$PS"; }
 restart_shell() {
     due shell-restart 60 || { log "shell: needs a restart ($1) but restarted <1 min ago, waiting"; return; }
     log "shell: restarting sigil-shell ($1)"
-    "$HOME/.local/bin/sigil-units" sigil
+    "$HOME/.local/bin/sigil-units" start
     note "Restarted the shell: $1"
 }
 
 # ── shell ────────────────────────────────────────────────────────────
-if [ "$MODE" = sigil ] && command -v qs >/dev/null; then
+if command -v qs >/dev/null; then
     state=$(sc is-active sigil-shell 2>/dev/null)
     dbg "sigil-shell service: $state"
     if [ "$state" != active ] && [ "$state" != activating ] && [ "$state" != reloading ]; then
@@ -76,7 +75,7 @@ if [ -n "$(pid_of pipewire)" ] && grep -q '^ *[0-9]' /proc/asound/cards 2>/dev/n
             if timeout 5 pactl list short sinks 2>/dev/null | grep -qv auto_null; then
                 note "Sound devices had disappeared; restarted the audio services. Reopen an app if it stays silent."
                 # the shell keeps its PipeWire connection through a WirePlumber restart, not a PipeWire one
-                [ "$MODE" = sigil ] && [ "${pw_restarted:-0}" = 1 ] && restart_shell "PipeWire was restarted"
+                [ "${pw_restarted:-0}" = 1 ] && restart_shell "PipeWire was restarted"
             else
                 note "Sound devices are gone and restarting the audio services didn't help." critical
             fi
@@ -108,4 +107,4 @@ if [ -n "$warn" ]; then
     due leak-note $([ $urg = critical ] && echo 300 || echo 1800) && note "Something is leaking connections:$warn" $urg
 fi
 
-log "ok · mode $MODE · bus $busn fds · pipewire $pwn fds · top $topc ×$topn"
+log "ok · bus $busn fds · pipewire $pwn fds · top $topc ×$topn"

@@ -1,10 +1,7 @@
 pragma ComponentBehavior: Bound
 
-// Desktop: wallpaper gallery (hyprpaper.conf + hyprlock.conf), updates,
-// daemon restarts and the dotfiles repo.
-// In sigil mode the shell draws the wallpaper itself (it watches hyprpaper.conf),
-// so hyprpaper is only restarted in legacy mode; daemons replaced by the shell go
-// through sigil-do, which starts the legacy daemon only in legacy mode.
+// Desktop: wallpaper gallery (the shell draws it; settings.json → "wallpaper"), rotation,
+// updates, daemon restarts and the dotfiles repo.
 
 import QtQuick
 import QtQuick.Layouts
@@ -17,21 +14,13 @@ import qs.settings.lib
 PageView {
     id: page
     property bool pageActive: false
-    property string wall: ""
+    readonly property string wall: Wallpapers.current
     property var files: []
     property string updates: "not checked yet"
     property string dots: "…"
-    property string mode: "legacy"
-
-    // sigil-do from ~/.local/bin, or straight from the repo if it is not linked there yet
-    readonly property string sigilDo: 'd="$HOME/.local/bin/sigil-do"; if [ -x "$d" ]; then exec "$d" "$@"; else exec bash "$HOME/sigil-shell/bin/sigil-do" "$@"; fi'
-    function sdo(action, cb) { Sh.sh(sigilDo, cb || null, 15, [action]); }
-    function isSigil() { return mode === "sigil"; }
 
     Component.onCompleted: refresh()
     function refresh() {
-        Sh.readFile(Sh.home + "/.config/sigil/mode", t => page.mode = t.trim() || "legacy");
-        readWallpaper();
         Sh.sh('cd "$1" 2>/dev/null && for f in *; do [ -f "$f" ] && echo "$f"; done', o => {
             const names = o.split("\n").filter(x => x && Wallpapers.isSupported(x) && !/_raw\.png$/.test(x)).sort();
             // video / animated thumbnails are rendered first (cached in ~/.cache/sigil/thumbs)
@@ -43,14 +32,8 @@ PageView {
             page.dots = n ? n + " uncommitted change(s)" : "clean";
         });
     }
-    function readWallpaper() {
-        Sh.readFile(Sh.hyprpaper, t => {
-            const m = t.match(/^\s*path\s*=\s*(.+)$/m);
-            page.wall = m ? m[1].trim() : "";
-        });
-    }
     function updateText() {
-        Sh.readFile(Sh.runtime + "/waybar-updates.json", (t, ok) => {
+        Sh.readFile(Sh.runtime + "/sigil-updates.json", (t, ok) => {
             if (!ok) { page.updates = "up to date"; return; }
             try {
                 const n = String(JSON.parse(t || "{}").text || "").trim();
@@ -60,18 +43,7 @@ PageView {
     }
 
     function applyWallpaper(path) {
-        const old = wall;
-        Sh.writeFile(Sh.hyprpaper, "wallpaper {\n    monitor =\n    path = " + path + "\n    fit_mode = cover\n}\nsplash = false\n", () => {
-            // byte-exact replace (the shell readers trim output)
-            if (old) Sh.run(["python3", "-c",
-                             "import sys\np, o, n = sys.argv[1:]\ntry:\n    t = open(p).read()\nexcept OSError:\n    sys.exit()\nif o in t:\n    open(p, 'w').write(t.replace(o, n))",
-                             Sh.hyprlock, old, path]);
-            Sh.readFile(Sh.home + "/.config/sigil/mode", m => {
-                page.mode = m.trim() || "legacy";
-                if (!page.isSigil()) Sh.restart("hyprpaper");
-            });
-        });
-        wall = path;
+        Wallpapers.set(path);
         Sh.toast("Wallpaper applied");
     }
     function pickWallpaper() {
@@ -85,8 +57,8 @@ PageView {
 
     Section {
         title: "Wallpaper"
-        description: "Images, GIFs and videos in ~/Pictures/Wallpapers. Click a tile to apply; hyprlock's background follows."
-            + (page.isSigil() ? " sigil-shell draws it (crossfade); hyprpaper is left alone." : "")
+        description: "Images, GIFs and videos in ~/Pictures/Wallpapers. Click a tile to apply."
+
         card: false
         Flow {
             Layout.fillWidth: true
@@ -289,16 +261,12 @@ PageView {
         description: "Restart a piece of the desktop without logging out."
         Repeater {
             model: [
-                { t: "Status bar", s: "sigil-switch restart (sigil-shell, or waybar in legacy mode)", k: "bar" },
-                { t: "Notifications", s: "sigil-do notifd; in legacy mode SwayNC also reloads config and style", k: "notifd" },
-                { t: "Polkit agent", s: "sigil-do polkitd (hyprpolkitagent in legacy mode, the shell otherwise)", k: "polkitd" },
+                { t: "Shell", s: "sigil-shell (bar, panels, notifications, wallpaper, this window too)", k: "shell" },
                 { t: "hypridle", s: "idle daemon", k: "hypridle" },
-                { t: "Wallpaper", s: "sigil-do wallpaperd (hyprpaper in legacy mode; the shell draws it otherwise)", k: "wallpaperd" },
                 { t: "hyprsunset", s: "night light daemon", k: "hyprsunset" },
                 { t: "Key sounds", s: "typewriter daemon", k: "keys" },
                 { t: "Audio stack", s: "pipewire + wireplumber (when sound dies or media will not start)", k: "audio" },
-                { t: "Hyprland config", s: "hyprctl reload", k: "hypr" },
-                { t: "GTK settings app", s: "the resident python sigil-settings (reloads its code)", k: "gtk" }
+                { t: "Hyprland config", s: "hyprctl reload", k: "hypr" }
             ]
             delegate: SettingRow {
                 id: svc
@@ -309,19 +277,12 @@ PageView {
                     text: "Restart"
                     onClicked: {
                         const k = svc.modelData.k;
-                        if (k === "bar") Sh.spawn([Sh.home + "/.local/bin/sigil-switch", "restart"]);
-                        else if (k === "notifd") page.sdo("notifd", () => { if (!page.isSigil()) Sh.sh("swaync-client -R; swaync-client -rs"); });
-                        else if (k === "polkitd") page.sdo("polkitd");
-                        else if (k === "wallpaperd") {
-                            if (page.isSigil()) page.sdo("wallpaperd");
-                            else Sh.run(["pkill", "-x", "hyprpaper"], () => Sh.later(300, () => page.sdo("wallpaperd")));
-                        }
-                        else if (k === "hypridle") Sh.restart("hypridle");
+                        if (k === "shell") Sh.spawn(["systemctl", "--user", "restart", "sigil-shell"]);
+                        else if (k === "hypridle") Sh.run(["systemctl", "--user", "restart", "hypridle"]);
                         else if (k === "hyprsunset") Sh.restart("hyprsunset");
                         else if (k === "keys") Sh.run([Sh.ksSh, "restart"]);
                         else if (k === "audio") Sh.run(["systemctl", "--user", "restart", "pipewire", "pipewire-pulse", "wireplumber"], null, 15);
                         else if (k === "hypr") Sh.run(["hyprctl", "reload"]);
-                        else if (k === "gtk") Sh.spawn(["sh", "-c", "python3 ~/.config/sigil-settings/sigil-settings.py --quit; sleep 1; python3 ~/.config/sigil-settings/sigil-settings.py --hidden"]);
                         Sh.toast(svc.modelData.t + " restarted");
                     }
                 }

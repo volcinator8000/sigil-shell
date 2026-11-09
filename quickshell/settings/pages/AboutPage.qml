@@ -49,7 +49,7 @@ PageView {
     Section {
         title: "Sigil"
         SettingRow { title: "Palette"; subtitle: "cherenkov blue · plasmatic purple · snooze pink · communication red · wavelength green · infrared · phosphorus amber" }
-        SettingRow { title: "Stack"; subtitle: "hyprland " + page.hyprVer + " · sigil-shell (quickshell) · waybar · swaync · hyprlock · kitty · rofi · zsh + starship" }
-        SettingRow { title: "Repo"; subtitle: "github.com/volcinator8000/dotfiles-and-scripts" }
+        SettingRow { title: "Stack"; subtitle: "hyprland " + page.hyprVer + " · sigil-shell (quickshell) · kitty · zsh + starship" }
+        SettingRow { title: "Repos"; subtitle: "github.com/volcinator8000/sigil-shell · github.com/volcinator8000/dotfiles-and-scripts" }
     }
 }

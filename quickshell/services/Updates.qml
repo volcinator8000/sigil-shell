@@ -1,9 +1,8 @@
 pragma Singleton
 pragma ComponentBehavior: Bound
 
-// Pending pacman + AUR updates. Reuses the checker from the waybar days
-// (~/.config/waybar/scripts/updates.sh: temp sync db + fakeroot, no root needed, cached in
-// $XDG_RUNTIME_DIR/waybar-updates.json) and the upgrade window (update-now.sh).
+// Pending pacman + AUR updates: bin/sigil-updates (temp sync db + fakeroot, no root needed,
+// cached in $XDG_RUNTIME_DIR/sigil-updates.json) and the upgrade window (bin/sigil-update-now).
 // Checks at start (cache first, so the count shows instantly), every 4 h, and after an upgrade.
 
 import QtQuick
@@ -13,7 +12,7 @@ import Quickshell.Io
 Singleton {
     id: root
 
-    readonly property string scripts: Quickshell.env("HOME") + "/.config/waybar/scripts"
+    readonly property string bin: Quickshell.env("HOME") + "/.local/bin"
     property int count: 0
     property int repo: 0
     property int aur: 0
@@ -42,19 +41,19 @@ Singleton {
 
     Process {
         id: cached
-        command: ["bash", root.scripts + "/updates.sh", "--cached"]
+        command: [root.bin + "/sigil-updates", "--cached"]
         stdout: StdioCollector { onStreamFinished: root.parse(text) }
     }
     Process {
         id: checker
-        command: ["bash", root.scripts + "/updates.sh"]
+        command: [root.bin + "/sigil-updates"]
         stdout: StdioCollector { onStreamFinished: root.parse(text) }
         onRunningChanged: root.checking = running
     }
     Process {
         id: upgrader
         // own scope: a shell restart must never kill a running paru
-        command: ["systemd-run", "--user", "--scope", "--quiet", "--collect", "--unit=sigil-upgrade-" + Date.now(), root.scripts + "/update-now.sh"]
+        command: ["systemd-run", "--user", "--scope", "--quiet", "--collect", "--unit=sigil-upgrade-" + Date.now(), root.bin + "/sigil-update-now"]
         onRunningChanged: { root.upgrading = running; if (!running) root.check(); }
     }
 

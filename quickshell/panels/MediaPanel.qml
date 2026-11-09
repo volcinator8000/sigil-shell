@@ -17,10 +17,7 @@ PanelWindow {
     readonly property bool atTop: corner.startsWith("top")
     readonly property bool atLeft: corner.endsWith("Left")
 
-    readonly property var player: {
-        const ps = Mpris.players.values;
-        return ps.find(p => p.isPlaying) || ps.find(p => p.identity === "Spotify") || ps[0] || null;
-    }
+    readonly property var player: Players.active
 
     property real openness: Actions.mediaOpen ? 1 : 0
     Behavior on openness { NumberAnimation { duration: Actions.mediaOpen ? Theme.dur(220) : Theme.dur(150); easing.type: Actions.mediaOpen ? Easing.OutCubic : Easing.InCubic } }

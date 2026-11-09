@@ -3,9 +3,8 @@ pragma ComponentBehavior: Bound
 
 // Wallpaper engine: file types, still frames, when to animate, and rotation.
 //
-// The current wallpaper is the `path` in ~/.config/hypr/hyprpaper.conf (the settings
-// page and the rotation both write it), so the lock screen, the wallpaper palette and
-// the legacy setup all agree on it.
+// The current wallpaper is settings.json → "wallpaper" (the settings page and the rotation
+// both write it; the lock screen and the wallpaper palette read it from here).
 //
 // settings.json → "wallpapers":
 //   mode:            "fixed" | "interval" | "schedule"
@@ -112,10 +111,9 @@ Singleton {
     readonly property bool shouldPlay: playing && !manualPause
 
     // ── apply ────────────────────────────────────────────────────────
-    FileView { id: hyprpaperFile; path: Theme.home + "/.config/hypr/hyprpaper.conf"; blockLoading: true; printErrors: false }
     function set(p) {
         if (!p || p === current) return;
-        hyprpaperFile.setText("wallpaper {\n    monitor =\n    path = " + p + "\n    fit_mode = cover\n}\nsplash = false\n");
+        Theme.patchSettings({ wallpaper: p });
     }
 
     // ── rotation ─────────────────────────────────────────────────────

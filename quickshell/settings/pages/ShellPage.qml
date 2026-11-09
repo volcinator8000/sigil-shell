@@ -322,29 +322,4 @@ PageView {
             ActionButton { text: "Look up"; onClicked: page.geocode(cityField.text) }
         }
     }
-
-    Section {
-        title: "Old / new desktop"
-        description: "sigil-shell replaces waybar, swaync, rofi, wlogout and the wallpaper daemon. SUPER+CTRL+SHIFT+B flips back and forth at any time."
-        SettingRow {
-            title: "Switch back to the old setup"
-            subtitle: "runs sigil-switch legacy: stops sigil-shell (this window too) and starts waybar & co. again"
-            titleColor: Theme.warn
-            ActionButton { text: "Switch to legacy…"; danger: true; onClicked: switchModal.open() }
-        }
-    }
-
-    overlays: Modal {
-        id: switchModal
-        title: "Switch back to the old setup?"
-        body: "sigil-shell stops, including this window, and the waybar desktop comes back. Return with SUPER+CTRL+SHIFT+B or `sigil-switch sigil`."
-        buttons: [
-            ActionButton { text: "Cancel"; onClicked: switchModal.close() },
-            ActionButton {
-                text: "Switch to legacy"
-                danger: true
-                onClicked: { switchModal.close(); Sh.spawn([Sh.home + "/.local/bin/sigil-switch", "legacy"]); }
-            }
-        ]
-    }
 }

@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 
 // Control center (replaces swaync's panel): toggles, sliders, media, notifications.
-// Toggle commands are the same ones the swaync config used.
 
 import QtQuick
 import Quickshell
@@ -24,8 +23,8 @@ Overlay {
         { label: "Wi-Fi",       glyph: 0xF05A9, state: "[ \"$(nmcli radio wifi)\" = enabled ]",            on: "nmcli radio wifi on",                 off: "nmcli radio wifi off" },
         { label: "Bluetooth",   glyph: 0xF00AF, state: "bluetoothctl show | grep -q 'Powered: yes'",        on: "bluetoothctl power on",               off: "bluetoothctl power off" },
         { label: "Mic muted",   glyph: 0xF036D, state: "wpctl get-volume @DEFAULT_AUDIO_SOURCE@ | grep -q MUTED", on: "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ 1", off: "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ 0" },
-        { label: "Keep awake",  glyph: 0xF0176, state: "[ \"$(~/.config/swaync/keepawake.sh state)\" = true ]", on: "~/.config/swaync/keepawake.sh on", off: "~/.config/swaync/keepawake.sh off" },
-        { label: "Night light", glyph: 0xF0594, state: "[ \"$(~/.config/swaync/nightlight.sh state)\" = true ]", on: "~/.config/swaync/nightlight.sh on", off: "~/.config/swaync/nightlight.sh off" },
+        { label: "Keep awake",  glyph: 0xF0176, state: "[ \"$(~/.local/bin/sigil-keepawake state)\" = true ]", on: "~/.local/bin/sigil-keepawake on", off: "~/.local/bin/sigil-keepawake off" },
+        { label: "Night light", glyph: 0xF0594, state: "[ \"$(~/.local/bin/sigil-nightlight state)\" = true ]", on: "~/.local/bin/sigil-nightlight on", off: "~/.local/bin/sigil-nightlight off" },
         { label: "Performance", glyph: 0xF140B, state: "[ \"$(powerprofilesctl get)\" = performance ]",     on: "powerprofilesctl set performance",    off: "powerprofilesctl set power-saver" },
         { label: "Key sounds",  glyph: 0xF030C, state: "[ \"$(~/.config/keysound/keysound.sh state)\" = true ]", on: "~/.config/keysound/keysound.sh start", off: "~/.config/keysound/keysound.sh stop" },
         { label: "Ultra saver", glyph: 0xF032A, state: "[ \"$(~/.local/bin/ultra state)\" = true ]",        on: "setsid -f ~/.local/bin/ultra on",      off: "setsid -f ~/.local/bin/ultra off" }
@@ -187,7 +186,7 @@ Overlay {
             // media
             Rectangle {
                 id: media
-                readonly property var player: Mpris.players.values.find(p => p.isPlaying) || Mpris.players.values[0] || null
+                readonly property var player: Players.active
                 visible: player !== null
                 width: parent.width
                 height: 64

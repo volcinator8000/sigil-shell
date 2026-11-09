@@ -1,6 +1,6 @@
 pragma ComponentBehavior: Bound
 
-// SIGIL // SETTINGS — the Quickshell port of ~/.config/sigil-settings/sigil-settings.py.
+// SIGIL // SETTINGS — the settings window.
 // One FloatingWindow, created once and shown/hidden (closing only hides it).
 // Pages load lazily on first visit and stay alive, like the GTK app.
 //   qs -c sigil ipc call settings toggle

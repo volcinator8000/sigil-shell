@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# sigil-update-now: open a wide kitty window with a banner,
+# the pending list, then run the upgrade. `--dry` only shows the banner + list.
+DRY=""; [[ "$1" == "--dry" ]] && DRY=1
+if [[ -z "$INSIDE_UPDATE_WINDOW" ]]; then
+    INSIDE_UPDATE_WINDOW=1 exec kitty --title "system-update" \
+        -o initial_window_width=112c -o initial_window_height=35c \
+        -o font_size=11 -o background_opacity=0.94 \
+        -e "$0" "$@"
+fi
+
+# cybersigilism palette (24-bit)
+B=$'\e[38;2;58;224;255m'; P=$'\e[38;2;166;77;255m'; K=$'\e[38;2;255;92;200m'
+A=$'\e[38;2;255;176;0m'; G=$'\e[38;2;57;255;20m'; R=$'\e[38;2;255;45;58m'
+M=$'\e[38;2;107;107;120m'; T=$'\e[38;2;220;220;227m'; X=$'\e[0m'
+
+banner=(
+'███████╗██╗   ██╗███████╗████████╗███████╗███╗   ███╗    ██╗   ██╗██████╗ ██████╗  █████╗ ████████╗███████╗'
+'██╔════╝╚██╗ ██╔╝██╔════╝╚══██╔══╝██╔════╝████╗ ████║    ██║   ██║██╔══██╗██╔══██╗██╔══██╗╚══██╔══╝██╔════╝'
+'███████╗ ╚████╔╝ ███████╗   ██║   █████╗  ██╔████╔██║    ██║   ██║██████╔╝██║  ██║███████║   ██║   █████╗  '
+'╚════██║  ╚██╔╝  ╚════██║   ██║   ██╔══╝  ██║╚██╔╝██║    ██║   ██║██╔═══╝ ██║  ██║██╔══██║   ██║   ██╔══╝  '
+'███████║   ██║   ███████║   ██║   ███████╗██║ ╚═╝ ██║    ╚██████╔╝██║     ██████╔╝██║  ██║   ██║   ███████╗'
+'╚══════╝   ╚═╝   ╚══════╝   ╚═╝   ╚══════╝╚═╝     ╚═╝     ╚═════╝ ╚═╝     ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚══════╝'
+)
+colors=("$B" "$B" "$P" "$P" "$K" "$K")
+clear; echo
+for i in "${!banner[@]}"; do printf '  %s%s%s\n' "${colors[$i]}" "${banner[$i]}" "$X"; done
+printf '  %s%s%s\n' "$M" "$(printf '─%.0s' $(seq 1 108))" "$X"
+printf '  %s%-40s%s%s%s\n' "$M" "$(date '+%a %d %b %Y  %H:%M' | tr a-z A-Z)" "$B" "$(echo "${HOSTNAME:-$(uname -n)} // $USER" | tr a-z A-Z)" "$X"
+echo
+
+# pending list from the checker's cache (fast) — refresh if older than 30 min
+cache="${XDG_RUNTIME_DIR:-/tmp}/sigil-updates.json"
+if [[ ! -f "$cache" || $(( $(date +%s) - $(stat -c %Y "$cache") )) -gt 1800 ]]; then
+    printf '  %s…checking for updates%s\n\n' "$M" "$X"; "$HOME/.local/bin/sigil-updates" >/dev/null 2>&1
+fi
+python3 - "$cache" "$B" "$A" "$M" "$X" <<'PY'
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+except Exception:
+    d = {"tooltip": "no cache"}
+B, A, M, X = sys.argv[2:6]
+lines = d.get("tooltip", "").split("\n")
+print(f"  {A}{lines[0]}{X}")
+for l in lines[2:]:
+    if not l.strip(): continue
+    if " -> " in l:
+        name, rest = l.split(" ", 1)
+        old, new = rest.split(" -> ")
+        print(f"  {B}▸{X} {name:<34} {M}{old:>22}{X}  →  {A}{new}{X}")
+    else:
+        print(f"  {M}{l}{X}")
+PY
+echo
+if [[ -n "$DRY" ]]; then printf '  %s[dry run] press Enter to close%s ' "$M" "$X"; read -r _; exit 0; fi
+
+printf '  %s%s%s\n\n' "$M" "$(printf '─%.0s' $(seq 1 108))" "$X"
+start=$(date +%s)
+paru -Syu
+rc=$?
+echo
+
+# ── post-update hooks (user side) ─────────────────────────────────────────
+# oh-my-zsh: its startup auto-update is off in .zshrc (DISABLE_AUTO_UPDATE), so update it here.
+# Same call `omz update` makes, minimal output; independent of paru's result.
+OMZ="$HOME/.oh-my-zsh"
+if [[ -f "$OMZ/tools/upgrade.sh" ]]; then
+    printf '  %s▸ oh-my-zsh: updating%s\n' "$B" "$X"
+    LANG= ZSH="$OMZ" zsh -f "$OMZ/tools/upgrade.sh" -v minimal 2>&1 | sed 's/^/    /'
+    echo
+fi
+
+# spicetify: a spotify upgrade replaces /opt/spotify (pacman hook re-opens the perms),
+# so re-inject the Cybersigil theme. Also covers the very first apply once /opt/spotify is writable.
+SPICE="$HOME/.spicetify/spicetify"; [[ -x "$SPICE" ]] || SPICE="$(command -v spicetify 2>/dev/null)"
+if [[ $rc -eq 0 && -n "$SPICE" && -d /opt/spotify ]]; then
+    since=$(date -d "@$start" +%FT%T)
+    spotify_touched=$(awk -v s="$since" '/\[ALPM\] (upgraded|installed|reinstalled) spotify / && substr($1, 2, 19) >= s' /var/log/pacman.log 2>/dev/null | tail -1)
+    # a pristine install/upgrade leaves xpui.spa packed; once spicetify has injected, it is an unpacked xpui/ dir
+    if [[ -n "$spotify_touched" || -f /opt/spotify/Apps/xpui.spa ]]; then
+        if [[ -w /opt/spotify/Apps ]]; then
+            printf '  %s▸ spicetify: re-applying Cybersigil theme%s\n' "$B" "$X"
+            "$SPICE" clear >/dev/null 2>&1   # drop the stale backup record from the previous spotify build
+            "$SPICE" backup apply 2>&1 | sed 's/^/    /' | tail -4
+        else
+            printf '  %s▸ spicetify: /opt/spotify not writable, run: sudo chmod a+wr -R /opt/spotify%s\n' "$A" "$X"
+        fi
+        echo
+    fi
+fi
+
+if [[ $rc -eq 0 ]]; then printf '  %s✔ done%s' "$G" "$X"; else printf '  %s✘ paru exited with %s%s' "$R" "$rc" "$X"; fi
+printf '  %s— press Enter to close%s ' "$M" "$X"; read -r _
+qs -c sigil ipc call updates check >/dev/null 2>&1 || true

@@ -1,6 +1,6 @@
 pragma ComponentBehavior: Bound
 
-// Launcher with three modes (replaces rofi): apps, emoji, clipboard.
+// Launcher with three modes: apps, emoji, clipboard.
 // Tab / Shift+Tab switches mode, ↑↓ moves, Enter runs, Esc closes.
 // Apps are ranked by match quality plus how often you launch them.
 
@@ -66,7 +66,7 @@ Overlay {
     property var emojis: []
     FileView {
         id: emojiFile
-        path: launcher.mode === "emoji" || launcher.emojis.length ? "/usr/share/rofi-emoji/all_emojis.txt" : ""
+        path: launcher.mode === "emoji" || launcher.emojis.length ? Quickshell.shellDir + "/data/emojis.txt" : ""
         printErrors: false
         onLoaded: {
             launcher.emojis = text().split("\n").filter(l => l).map(l => {

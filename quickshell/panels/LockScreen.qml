@@ -172,7 +172,7 @@ Scope {
 
             // bottom-left: now playing
             Row {
-                readonly property var player: Mpris.players.values.find(p => p.isPlaying) || Mpris.players.values[0] || null
+                readonly property var player: Players.active
                 visible: player !== null && !!player.trackTitle
                 anchors { left: parent.left; bottom: parent.bottom; margins: 36 }
                 spacing: 12

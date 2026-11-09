@@ -1,5 +1,5 @@
 # sigil-shell under systemd, so it comes back by itself if it crashes.
-# Started by bin/sigil-session at login (and by sigil-switch); only runs in sigil mode.
+# Started by bin/sigil-session at login (and by `sigil restart`).
 [Unit]
 Description=sigil-shell (Quickshell desktop shell)
 Documentation=https://github.com/volcinator8000/sigil-shell
@@ -12,7 +12,6 @@ StartLimitBurst=12
 
 [Service]
 Type=simple
-ExecCondition=/bin/sh -c '[ "$(cat %h/.config/sigil/mode 2>/dev/null)" = sigil ]'
 ExecStartPre=-/usr/bin/systemctl --user stop swaync.service hyprpolkitagent.service
 ExecStart=/usr/bin/qs -c sigil -n
 Restart=on-failure

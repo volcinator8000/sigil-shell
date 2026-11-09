@@ -20,8 +20,8 @@ Generators (code, not templates) handle configs that must embed the user's own f
   starship: ~/.config/starship.toml + a "sigil" palette → ~/.config/sigil/starship.toml
             (zsh points STARSHIP_CONFIG at it only while it exists)
 
-`sigil-apply --clear` (or mode != sigil) deletes every generated file and reloads
-the apps, which puts them back on their own config.
+`sigil-apply --clear` deletes every generated file and reloads the apps, which puts
+them back on their own config.
 """
 import json
 import os
@@ -33,13 +33,6 @@ from pathlib import Path
 REPO = Path(os.path.realpath(__file__)).parent.parent
 TEMPLATES = REPO / "templates"
 CFG = Path.home() / ".config" / "sigil"
-
-
-def mode() -> str:
-    try:
-        return (CFG / "mode").read_text().strip()
-    except OSError:
-        return "legacy"
 
 
 def header(text: str, key: str) -> str | None:
@@ -108,7 +101,7 @@ def main() -> int:
     if "--gtk-reload" in sys.argv:
         gtk_reload()
         return 0
-    clear = "--clear" in sys.argv or mode() != "sigil"
+    clear = "--clear" in sys.argv
     palette = {}
     if not clear:
         try:

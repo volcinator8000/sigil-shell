@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# sigil: small control command for sigil-shell.
+#
+#   sigil status          what is running, palette, health
+#   sigil restart         restart the shell (systemd service)
+#   sigil palette NAME    cybersigil wallpaper ashfall coldiron bruise static patina
+#   sigil test-lock       show the lock screen for 6 s; it unlocks by itself
+#   sigil health          run the health check now, with details
+#   sigil logs            follow the shell's log
+set -u
+CFG="$HOME/.config/sigil"
+
+case "${1:-status}" in
+    restart)   "$HOME/.local/bin/sigil-units" start ;;
+    test-lock) qs -c sigil ipc call lock test ;;
+    health)    "$HOME/.local/bin/sigil-health" -v ;;
+    logs)      exec qs log -c sigil -f ;;
+    palette)
+        name="${2:?usage: sigil palette <name>}"
+        python3 - "$CFG/settings.json" "$name" <<'EOF'
+import json, sys
+p, name = sys.argv[1], sys.argv[2]
+try: s = json.load(open(p))
+except Exception: s = {}
+s["palette"] = name
+json.dump(s, open(p, "w"), indent=2); open(p, "a").write("\n")
+EOF
+        echo "palette → $name" ;;
+    status)
+        echo "shell:   $(systemctl --user is-active sigil-shell 2>/dev/null) (ipc: $(timeout 3 qs -c sigil ipc show >/dev/null 2>&1 && echo answering || echo silent))"
+        echo "health:  $(systemctl --user is-active sigil-health.timer 2>/dev/null) · last: $(journalctl --user -u sigil-health -n 1 -o cat --no-pager 2>/dev/null | tail -1)"
+        echo "palette: $(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("palette","?"))' "$CFG/settings.json" 2>/dev/null || echo '?')"
+        echo "helpers: $(for u in hypridle udiskie playerctld nm-applet kdeconnect-indicator keysound; do printf '%s:%s ' "$u" "$(systemctl --user is-active $u 2>/dev/null)"; done)" ;;
+    *) sed -n '2,10p' "$0"; exit 1 ;;
+esac

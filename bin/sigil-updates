@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# sigil-updates: count pending pacman + AUR updates without root (read by the shell's Updates service).
+# Mirrors what `checkupdates` does (temp sync db + fakeroot) so pacman-contrib isn't required.
+set -o pipefail
+CACHE="${XDG_RUNTIME_DIR:-/tmp}/sigil-updates.json"
+TMPDB="${XDG_RUNTIME_DIR:-/tmp}/checkup-db-$UID"
+DBPATH="$(pacman-conf DBPath 2>/dev/null || echo /var/lib/pacman)"
+
+if [[ "$1" == "--cached" && -f "$CACHE" ]]; then cat "$CACHE"; exit 0; fi
+# test hook: `echo 7 > $CACHE.fake` to preview the widget with N updates
+if [[ -f "$CACHE.fake" ]]; then n=$(<"$CACHE.fake"); printf '{"text":"󰏔 %s","tooltip":"preview: %s fake updates","class":"%s","alt":"pending"}\n' "$n" "$n" "$([[ $n -ge 20 ]] && echo many || echo pending)"; exit 0; fi
+
+# no network -> report last known state, or 0
+if ! ping -c1 -W2 archlinux.org >/dev/null 2>&1; then
+    [[ -f "$CACHE" ]] && cat "$CACHE" || echo '{"text":"","tooltip":"offline","class":"offline"}'
+    exit 0
+fi
+
+# single instance: a second concurrent run (click + timer) would corrupt the temp db
+exec 9>"$TMPDB.lock"
+if ! flock -n 9; then
+    flock 9   # wait for the running check, then hand out its result
+    [[ -f "$CACHE" ]] && cat "$CACHE" || echo '{"text":"","tooltip":"checking…","class":"offline"}'
+    exit 0
+fi
+mkdir -p "$TMPDB/sync" 2>/dev/null
+ln -sfn "$DBPATH/local" "$TMPDB/local" 2>/dev/null
+if ! fakeroot -- pacman -Sy --disable-sandbox --dbpath "$TMPDB" --logfile /dev/null >/dev/null 2>&1; then
+    # sync failed (mirror hiccup): keep the last known state instead of claiming 0
+    [[ -f "$CACHE" ]] && cat "$CACHE" || echo '{"text":"","tooltip":"db sync failed","class":"offline"}'
+    exit 0
+fi
+repo="$(pacman -Qu --dbpath "$TMPDB" 2>/dev/null | grep -v '\[ignored\]')"
+aur="$(paru -Qua 2>/dev/null)"
+
+nrepo=$( [[ -n "$repo" ]] && wc -l <<<"$repo" || echo 0 )
+naur=$(  [[ -n "$aur"  ]] && wc -l <<<"$aur"  || echo 0 )
+total=$((nrepo + naur))
+
+tooltip="repo: $nrepo · aur: $naur"
+list="$(printf '%s\n%s' "$repo" "$aur" | sed '/^$/d' | head -25)"
+[[ -n "$list" ]] && tooltip="$tooltip\n\n$list"
+[[ $total -gt 25 ]] && tooltip="$tooltip\n…"
+tooltip="${tooltip//\"/\\\"}"
+tooltip="${tooltip//$'\n'/\\n}"
+
+if   [[ $total -eq 0 ]]; then cls="uptodate"; text=""
+elif [[ $total -lt 20 ]]; then cls="pending";  text="󰏔 $total"
+else                           cls="many";     text="󰏔 $total"
+fi
+printf '{"text":"%s","tooltip":"%s","class":"%s","alt":"%s"}\n' "$text" "$tooltip" "$cls" "$cls" | tee "$CACHE"

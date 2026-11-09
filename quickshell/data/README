@@ -1,0 +1,2 @@
+emojis.txt: emoji names and keywords from rofi-emoji (MIT, https://github.com/Mange/rofi-emoji),
+built from Unicode CLDR data. Read by panels/Launcher.qml (emoji mode).

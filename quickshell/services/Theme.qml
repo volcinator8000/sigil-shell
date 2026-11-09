@@ -36,11 +36,24 @@ Singleton {
 
     // ── power-aware effects ──────────────────────────────────────────
     readonly property bool onBattery: UPower.onBattery
-    readonly property bool rich: effects === "full" || (effects === "auto" && !onBattery)
+    // ultra power saver (~/.local/bin/ultra tells us via `qs ipc call theme ultra true|false`;
+    // its marker file is read at start-up): no rich effects, no UI animation, ULTRA badge in the bar
+    property bool ultra: false
+    IpcHandler {
+        target: "theme"
+        function ultra(on: bool): void { root.ultra = on; }
+        function isUltra(): bool { return root.ultra; }
+    }
+    FileView {
+        path: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/ultra/active"
+        printErrors: false
+        onLoaded: root.ultra = true
+    }
+    readonly property bool rich: !ultra && (effects === "full" || (effects === "auto" && !onBattery))
     // Animation length. On battery the expensive effects (blur, glow, animated wallpaper,
     // fast sensor polling) are dropped; UI motion only gets slightly shorter, since a
     // 200 ms transition costs next to nothing and cutting it makes panels pop.
-    function dur(ms) { return rich ? ms : Math.round(ms * 0.85); }
+    function dur(ms) { return ultra ? 0 : rich ? ms : Math.round(ms * 0.85); }
 
     // ── colours ──────────────────────────────────────────────────────
     property color bg: "#050507"
@@ -120,18 +133,20 @@ Singleton {
         }
     }
 
-    // ── wallpaper-derived palette ────────────────────────────────────
+    // ── current wallpaper: settings.json → "wallpaper" ─────────────────
+    // (older setups kept it in hyprpaper.conf; read once as a fallback when the key is missing)
     FileView {
-        id: hyprpaperConf
-        path: root.home + "/.config/hypr/hyprpaper.conf"
-        watchChanges: true
-        onFileChanged: reload()
+        id: oldHyprpaperConf
+        path: root.settingsLoaded && !root.wallpaperOverride ? root.home + "/.config/hypr/hyprpaper.conf" : ""
+        printErrors: false
     }
     readonly property string wallpaperPath: {
         if (wallpaperOverride) return wallpaperOverride;
-        const m = (hyprpaperConf.text() || "").match(/^\s*path\s*=\s*(.+?)\s*$/m);
+        const m = (oldHyprpaperConf.text() || "").match(/^\s*path\s*=\s*(.+?)\s*$/m);
         return m ? m[1].replace(/^~/, home) : "";
     }
+
+    // ── wallpaper-derived palette ────────────────────────────────────
 
     ColorQuantizer {
         id: quantizer

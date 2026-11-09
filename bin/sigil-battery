@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# sigil-battery: one-line battery status, e.g. "󰁾 62%  3h 05min until empty".
+# (The charger automation that used to live in waybar's battery.sh is in the shell now:
+#  quickshell/services/PowerAuto.qml.)
+dev=$(upower -e | grep -m1 BAT) || { echo "no battery"; exit 0; }
+eval "$(upower -i "$dev" | awk -F': *' '
+  /state:/            {print "state="$2}
+  /energy:/           {print "e="$2+0}
+  /energy-full:/      {print "ef="$2+0}
+  /energy-rate:/      {print "rate="$2+0}
+  /percentage:/       {gsub("%","",$2); print "pct="$2+0}')"
+icons=(󰂎 󰁺 󰁻 󰁼 󰁽 󰁾 󰁿 󰂀 󰂁 󰂂 󰁹)
+idx=$(( ${pct%.*} / 10 )); (( idx > 10 )) && idx=10
+hm() { printf '%dh %02dmin' $(($1 / 60)) $(($1 % 60)); }
+case "$state" in
+    discharging) line="estimating…"; awk "BEGIN{exit !($rate > 0.5)}" && line="$(hm "$(awk "BEGIN{printf \"%d\", $e / $rate * 60}")") until empty"
+                 echo "${icons[$idx]} ${pct%.*}%  $line" ;;
+    charging)    line="estimating…"; awk "BEGIN{exit !($rate > 0.5)}" && line="$(hm "$(awk "BEGIN{printf \"%d\", ($ef - $e) / $rate * 60}")") until full"
+                 echo "󰂄 ${pct%.*}%  $line" ;;
+    fully-charged) echo "󰁹 ${pct%.*}%  full" ;;
+    *)           echo "󰚥 ${pct%.*}%  plugged, not charging" ;;
+esac

@@ -1,6 +1,6 @@
 pragma ComponentBehavior: Bound
 
-// Pending updates in the bar (hidden when up to date, like the old waybar module).
+// Pending updates in the bar (hidden when up to date).
 // Hover: list of packages · click: open the upgrade window · right click: check again.
 
 import QtQuick

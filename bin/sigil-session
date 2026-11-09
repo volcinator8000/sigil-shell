@@ -1,15 +1,6 @@
 #!/usr/bin/env bash
-# Started by Hyprland at login in place of `waybar`.
-# Runs sigil-shell when ~/.config/sigil/mode says "sigil", waybar otherwise.
-mode=$(cat "$HOME/.config/sigil/mode" 2>/dev/null || echo legacy)
+# Started by Hyprland at login: hands the session to sigil-shell (a systemd user service,
+# restarted automatically if it crashes; sigil-health checks on it every minute).
 UNITS="$HOME/.local/bin/sigil-units"
-# services (sigil-shell, health check, helpers) get Hyprland's environment
-"$UNITS" env
-if [ "$mode" = sigil ] && command -v qs >/dev/null; then
-    # sigil-shell runs as a systemd user service (restarts itself on a crash); anything that
-    # D-Bus-activated swaync before it came up is stopped, and swaync is blocked until reboot.
-    exec "$UNITS" sigil
-fi
-"$UNITS" legacy
-"$HOME/.local/bin/sigil-apply" --clear >/dev/null 2>&1
-exec waybar
+"$UNITS" env      # services get Hyprland's environment (cursor, Qt/GTK, PATH)
+exec "$UNITS" start

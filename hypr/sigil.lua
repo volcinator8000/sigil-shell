@@ -1,6 +1,5 @@
 -- sigil-shell additions to Hyprland. Loaded from hyprland.lua with
 --   pcall(dofile, os.getenv("HOME") .. "/sigil-shell/hypr/sigil.lua")
--- Harmless in legacy mode: the rules only match sigil-shell surfaces.
 
 -- sigil-shell animates its own surfaces; Hyprland's layer fade on top of that doubled
 -- every open/close and made them feel laggy.
@@ -14,10 +13,8 @@ hl.layer_rule({ name = "blur-sigil", match = { namespace = "^sigil-(bar|panel)$"
 -- instead of leaving the session stuck on the "lockscreen died" screen.
 hl.config({ misc = { allow_session_lock_restore = true } })
 
-local sw = os.getenv("HOME") .. "/.local/bin/sigil-switch"
-
--- Emergency switch between the old setup and sigil-shell
-hl.bind("SUPER + CTRL + SHIFT + B", hl.dsp.exec_cmd(sw .. " toggle"))
+-- Emergency: restart the shell (bar gone, panels stuck, …)
+hl.bind("SUPER + CTRL + SHIFT + B", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.local/bin/sigil restart"))
 -- Desktop widgets: edit mode / raise above windows
 hl.bind("SUPER + W", hl.dsp.exec_cmd("qs -c sigil ipc call widgets edit"))
 hl.bind("SUPER + SHIFT + W", hl.dsp.exec_cmd("qs -c sigil ipc call widgets peek"))
