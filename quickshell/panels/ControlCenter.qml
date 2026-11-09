@@ -44,17 +44,11 @@ Overlay {
     Rectangle {
         id: panel
         anchors.fill: parent
-        radius: Theme.radius * 1.2
-        color: Theme.rich ? Theme.alpha(Theme.s1, 0.9) : Theme.s1
-        border.width: 1
-        border.color: Theme.line
+        color: "transparent"      // Overlay draws the side-sheet background
         focus: true
         Keys.onEscapePressed: Actions.controlCenterOpen = false
         MouseArea { anchors.fill: parent }
         HoverHandler { id: panelHover }
-
-        // slide in from the right
-        transform: Translate { x: (1 - cc.openness) * ((cc.cornerMode && cc.atLeft) ? -36 : 36) }
 
         Column {
             id: top
