@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Shapes
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
@@ -12,19 +13,52 @@ PanelWindow {
     id: bar
 
     anchors { top: true; left: true; right: true }
-    implicitHeight: 6 + Theme.bs(30)
+    // flush with the screen top; the window reaches `fillet` px lower so the bar's bottom
+    // corners can curve out into the screen edges (inverted radius). Only the bar itself
+    // reserves space and takes input.
+    readonly property int barH: Theme.bs(30)
+    readonly property int fillet: Theme.radius + 2
+    implicitHeight: barH + fillet
+    exclusiveZone: barH
+    mask: Region { item: frame }
     color: "transparent"
     WlrLayershell.namespace: "sigil-bar"
     WlrLayershell.layer: WlrLayer.Top
 
-    Rectangle {
+    property color fill: Theme.rich ? Theme.alpha(Theme.s1, 0.78) : Theme.s1
+    Behavior on fill { ColorAnimation { duration: Theme.dur(300) } }
+
+    // one path for bar + both fillets, so the translucent fill has no seams
+    Shape {
+        anchors.fill: parent
+        preferredRendererType: Shape.CurveRenderer
+        ShapePath {
+            fillColor: bar.fill
+            strokeColor: "transparent"
+            startX: 0; startY: 0
+            PathLine { x: bar.width; y: 0 }
+            PathLine { x: bar.width; y: bar.barH + bar.fillet }
+            PathArc { x: bar.width - bar.fillet; y: bar.barH; radiusX: bar.fillet; radiusY: bar.fillet; direction: PathArc.Counterclockwise }
+            PathLine { x: bar.fillet; y: bar.barH }
+            PathArc { x: 0; y: bar.barH + bar.fillet; radiusX: bar.fillet; radiusY: bar.fillet; direction: PathArc.Counterclockwise }
+            PathLine { x: 0; y: 0 }
+        }
+        // hairline along the lower contour only
+        ShapePath {
+            fillColor: "transparent"
+            strokeColor: Theme.line
+            strokeWidth: 1
+            startX: bar.width - 0.5; startY: bar.barH + bar.fillet
+            PathArc { x: bar.width - bar.fillet; y: bar.barH - 0.5; radiusX: bar.fillet - 0.5; radiusY: bar.fillet - 0.5; direction: PathArc.Counterclockwise }
+            PathLine { x: bar.fillet; y: bar.barH - 0.5 }
+            PathArc { x: 0.5; y: bar.barH + bar.fillet; radiusX: bar.fillet - 0.5; radiusY: bar.fillet - 0.5; direction: PathArc.Counterclockwise }
+        }
+    }
+
+    Item {
         id: frame
-        anchors { fill: parent; topMargin: 6; leftMargin: 6; rightMargin: 6 }
-        radius: Theme.radius
-        color: Theme.rich ? Theme.alpha(Theme.s1, 0.78) : Theme.s1
-        border.width: 1
-        border.color: Theme.line
-        Behavior on color { ColorAnimation { duration: Theme.dur(300) } }
+        anchors { left: parent.left; right: parent.right; top: parent.top }
+        height: bar.barH
 
         RowLayout {
             anchors { fill: parent; leftMargin: Theme.bs(10); rightMargin: Theme.bs(12) }
