@@ -15,7 +15,7 @@ PanelWindow {
     // flush with the screen top; corners and the hairline under it come from Frame
     readonly property int barH: Theme.barH
     implicitHeight: barH
-    exclusiveZone: barH
+    exclusionMode: ExclusionMode.Ignore   // Frame reserves the space
     mask: Region { item: frame }
     color: "transparent"
     WlrLayershell.namespace: "sigil-bar"

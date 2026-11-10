@@ -16,7 +16,7 @@ Item {
     readonly property bool ready: loader.item !== null && loader.item.ready === true
     anchors.fill: parent
     opacity: 0
-    Behavior on opacity { NumberAnimation { duration: Theme.dur(800); easing.type: Easing.InOutQuad } }
+    Behavior on opacity { enabled: slot.win.shown; NumberAnimation { duration: Theme.dur(800); easing.type: Easing.InOutQuad } }
     // swap in once loaded. Checked on every load too: a new item can be ready immediately,
     // in which case `ready` never changes and onReadyChanged alone would miss it.
     function trySwap() { if (ready && path === slot.win.path) slot.win.swap(slot); }
@@ -42,8 +42,8 @@ Item {
             fillMode: Image.PreserveAspectCrop
             asynchronous: true
             cache: false
-            sourceSize.width: slot.win.width
-            sourceSize.height: slot.win.height
+            sourceSize.width: slot.win.screen ? slot.win.screen.width : 0
+            sourceSize.height: slot.win.screen ? slot.win.screen.height : 0
         }
     }
     Component {

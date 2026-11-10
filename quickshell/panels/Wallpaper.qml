@@ -23,6 +23,15 @@ PanelWindow {
     WlrLayershell.namespace: "sigil-wallpaper"
 
     readonly property string path: Wallpapers.current
+
+    // Mapped only once the first image is loaded, and shown without a fade: the first
+    // frames were committed while the fade was still at 0 and sometimes never replaced
+    // (no frame callbacks for a background surface under windows), leaving a bare screen.
+    property bool shown: false
+    visible: shown
+    readonly property bool frontReady: front.ready
+    onFrontReadyChanged: if (frontReady) shown = true
+    Timer { interval: 3000; running: true; onTriggered: win.shown = true }   // missing file: show bg
     property Item front: slotA
 
     function show(p) {
@@ -37,10 +46,10 @@ PanelWindow {
         s.opacity = 1;
         front.opacity = 0;
         front = s;
-        kick();
+        kick(true);
     }
     onPathChanged: show(path)
-    Component.onCompleted: { slotA.path = path; slotA.opacity = 1; kick(); }
+    Component.onCompleted: { slotA.path = path; slotA.opacity = 1; kick(true); }
 
     // Redraw nudge. Under windows this surface gets no frame callbacks from Hyprland, and Qt
     // can drop the redraw that should follow an image load, leaving the first (empty) frame on
@@ -52,10 +61,13 @@ PanelWindow {
     Timer {
         id: settle
         property int n: 0
+        property int count: 6
         interval: 350; repeat: true
-        onTriggered: { win.pokeTick = !win.pokeTick; if (++n >= 6) stop(); }
+        onTriggered: { win.pokeTick = !win.pokeTick; if (++n >= count) stop(); }
     }
-    function kick() { settle.n = 0; settle.restart(); }
+    // short nudge for workspace/window events; a long one (~12 s) after start and image
+    // changes, when the first frame was sometimes never replaced and the screen stayed bare
+    function kick(long) { settle.n = 0; settle.count = long ? 34 : 6; settle.restart(); }
     Connections {
         target: Hyprland
         function onRawEvent(e) {
