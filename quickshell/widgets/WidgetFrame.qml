@@ -21,18 +21,24 @@ Item {
     property bool migrate: false
     readonly property real sw: parent ? parent.width : 0
     readonly property real sh: parent ? parent.height : 0
-    readonly property real vw: width * curScale         // on-screen size
-    readonly property real vh: height * curScale
+    // Screen factor: the layout (offsets and sizes) is defined for a Theme.widgetRefHeight-px
+    // tall screen and drawn in proportion on others (1080p → 0.75 of a 1440p layout).
+    readonly property real k: sh > 0 ? sh / Math.max(1, Theme.widgetRefHeight) : 1
+    property real liveScale: -1                          // while dragging the size handle
+    readonly property real userScale: liveScale > 0 ? liveScale : curScale
+    readonly property real vw: width * userScale * k     // on-screen size
+    readonly property real vh: height * userScale * k
     readonly property real minX: Theme.frame
     readonly property real minY: Theme.barH + Theme.frame
     function clampX(v, w) { return Math.max(minX, Math.min(sw - w - Theme.frame, v)); }
     function clampY(v, h) { return Math.max(minY, Math.min(sh - h - Theme.frame, v)); }
     readonly property real placedX: {
         const a = entry.ax || "left", o = entry.x || 0;
-        return clampX(a === "right" ? sw - vw - o : a === "center" ? (sw - vw) / 2 + o : o, vw);
+        const o2 = o * k;
+        return clampX(a === "right" ? sw - vw - o2 : a === "center" ? (sw - vw) / 2 + o2 : o2, vw);
     }
     readonly property real placedY: {
-        const a = entry.ay || "top", o = entry.y || 0;
+        const a = entry.ay || "top", o = (entry.y || 0) * k;
         return clampY(a === "bottom" ? sh - vh - o : a === "center" ? (sh - vh) / 2 + o : o, vh);
     }
     // top-left px on this screen (size w × h on screen) → anchored entry fields
@@ -40,10 +46,12 @@ Item {
         if (snap) { px = Widgets.snap(px); py = Widgets.snap(py); }
         px = clampX(px, w); py = clampY(py, h);
         const cx = px + w / 2, cy = py + h / 2;
+        const kk = k;
         const ax = cx < sw / 3 ? "left" : cx > sw * 2 / 3 ? "right" : "center";
         const ay = cy < sh / 3 ? "top" : cy > sh * 2 / 3 ? "bottom" : "center";
-        return { ax: ax, x: Math.round(ax === "left" ? px : ax === "right" ? sw - w - px : cx - sw / 2),
-                 ay: ay, y: Math.round(ay === "top" ? py : ay === "bottom" ? sh - h - py : cy - sh / 2) };
+        // stored in layout px (screen px / k)
+        return { ax: ax, x: Math.round((ax === "left" ? px : ax === "right" ? sw - w - px : cx - sw / 2) / kk),
+                 ay: ay, y: Math.round((ay === "top" ? py : ay === "bottom" ? sh - h - py : cy - sh / 2) / kk) };
     }
     // while resizing, hold the top-left still; the anchor is recomputed on release
     property bool pinned: false
@@ -60,7 +68,7 @@ Item {
         onTriggered: Widgets.update(frame.entry.id, frame.anchored(frame.entry.x || 0, frame.entry.y || 0, frame.vw, frame.vh, false))
     }
     opacity: entry.opacity !== undefined ? entry.opacity : 1
-    scale: entry.scale !== undefined ? entry.scale : 1
+    scale: userScale * k
     transformOrigin: Item.TopLeft
     // Size: the content's own size, or the width / height set by dragging an edge in edit
     // mode (entry.w / entry.h, content px before scaling). Types read entry.w / entry.h and
@@ -157,10 +165,10 @@ Item {
             onPositionChanged: (m) => {
                 if (!pressed) return;
                 const dx = mapToItem(null, m.x, m.y).x - startX;
-                frame.scale = Math.max(0.5, Math.min(2.5, Math.round(startScale * (1 + dx / (frame.width * startScale)) * 20) / 20));
+                frame.liveScale = Math.max(0.5, Math.min(2.5, Math.round(startScale * (1 + dx / (frame.width * startScale * frame.k)) * 20) / 20));
             }
-            onReleased: Widgets.update(frame.entry.id, Object.assign({ scale: frame.scale },
-                            frame.anchored(frame.x, frame.y, frame.width * frame.scale, frame.height * frame.scale, false)))
+            onReleased: Widgets.update(frame.entry.id, Object.assign({ scale: frame.liveScale > 0 ? frame.liveScale : frame.curScale },
+                            frame.anchored(frame.x, frame.y, frame.vw, frame.vh, false)))
         }
     }
 
@@ -194,7 +202,7 @@ Item {
             onPositionChanged: (m) => {
                 if (!pressed) return;
                 const p = mapToItem(null, m.x, m.y);
-                const d = ((eh.vertical ? p.y : p.x) - start) / Math.max(0.1, frame.curScale);
+                const d = ((eh.vertical ? p.y : p.x) - start) / Math.max(0.1, frame.curScale * frame.k);
                 const v = Math.max(40, Widgets.snap(startSize + d));
                 if (eh.vertical) frame.liveH = v; else frame.liveW = v;
             }
@@ -218,7 +226,7 @@ Item {
         x: 0
         y: frame.y < 80 ? frame.height + 8 : -30
         // keep it readable whatever the widget's own scale / opacity
-        scale: 1 / Math.max(0.01, frame.curScale)
+        scale: 1 / Math.max(0.01, frame.scale)
         transformOrigin: frame.y < 80 ? Item.TopLeft : Item.BottomLeft
         opacity: 1 / Math.max(0.2, frame.curOpacity)
 

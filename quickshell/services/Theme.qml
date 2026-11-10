@@ -37,6 +37,7 @@ Singleton {
     readonly property int frameRadius: radius + 2
     property var wallpapers: ({})        // see services/Wallpapers.qml
     property int widgetGrid: 20          // settings.json → widgets.grid (0 = free placement)
+    property int widgetRefHeight: 1440   // settings.json → widgets.refHeight: screen height the widget layout is sized for (others scale)
     property var notifications: ({})     // settings.json → notifications { group, timeout, maxPopups, rules: [] }
     property bool settingsLoaded: false
 
@@ -128,6 +129,7 @@ Singleton {
         wallpapers = s.wallpapers || {};
         notifications = s.notifications || {};
         widgetGrid = (s.widgets && s.widgets.grid !== undefined) ? s.widgets.grid : 20;
+        widgetRefHeight = (s.widgets && s.widgets.refHeight) || 1440;
         settingsLoaded = true;
     }
 
