@@ -16,6 +16,9 @@ Scope {
     id: root
     required property ShellScreen screen
     readonly property bool raised: Widgets.editing || Widgets.peek
+    // old absolute layouts were made on the biggest screen: convert them there
+    readonly property bool biggest: Quickshell.screens.every(s => s.width * s.height <= root.screen.width * root.screen.height)
+                                    && Quickshell.screens.find(s => s.width * s.height === root.screen.width * root.screen.height) === root.screen
 
     // Behind windows
     PanelWindow {
@@ -26,7 +29,7 @@ Scope {
         exclusionMode: ExclusionMode.Ignore
         WlrLayershell.layer: WlrLayer.Bottom
         WlrLayershell.namespace: "sigil-desktop"
-        WidgetCanvas { anchors.fill: parent; editing: false }
+        WidgetCanvas { anchors.fill: parent; editing: false; migrate: root.biggest }
     }
 
     // Above windows (dashboard peek / edit mode)

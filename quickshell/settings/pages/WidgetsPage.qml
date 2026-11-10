@@ -157,7 +157,7 @@ PageView {
                         }
                         Label {
                             width: parent.width
-                            text: (wrow.modelData.style || "card") + " · " + Math.round(wrow.modelData.x) + ", " + Math.round(wrow.modelData.y)
+                            text: (wrow.modelData.style || "card") + " · " + (wrow.modelData.ay || "top") + "-" + (wrow.modelData.ax || "left") + " · " + Math.round(wrow.modelData.x || 0) + ", " + Math.round(wrow.modelData.y || 0)
                             color: Theme.dim
                             font.pixelSize: 10
                             elide: Text.ElideRight
@@ -234,7 +234,9 @@ PageView {
                 }
                 SettingRow {
                     title: "Position"
-                    subtitle: "px, from top-left"
+                    subtitle: page.selEntry ? "px from the " + ({ left: "left edge", center: "centre", right: "right edge" })[page.selEntry.ax || "left"]
+                                            + " / " + ({ top: "top", center: "centre", bottom: "bottom" })[page.selEntry.ay || "top"]
+                                            + " (anchor follows where you drop it)" : ""
                     Label { text: "x"; color: Theme.dim }
                     SpinField { id: xField; from: -4000; to: 8000; stepSize: 10; onValueModified: v => Widgets.update(page.sel, { x: v }) }
                     Label { text: "y"; color: Theme.dim }

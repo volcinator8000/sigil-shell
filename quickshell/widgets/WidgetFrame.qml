@@ -13,8 +13,52 @@ Item {
 
     HoverHandler { id: hoverH }
 
-    x: entry.x
-    y: entry.y
+    // Position: anchored to the screen, so one layout fits monitors of any size.
+    //   entry.ax  left | center | right    entry.x  px from that edge (center: widget centre
+    //   entry.ay  top  | center | bottom   entry.y  minus screen centre)
+    // The anchor is picked from where the widget is dropped (nearest third of the screen).
+    // Entries without ax / ay are old absolute top-left px: converted once (see migrate).
+    property bool migrate: false
+    readonly property real sw: parent ? parent.width : 0
+    readonly property real sh: parent ? parent.height : 0
+    readonly property real vw: width * curScale         // on-screen size
+    readonly property real vh: height * curScale
+    readonly property real minX: Theme.frame
+    readonly property real minY: Theme.barH + Theme.frame
+    function clampX(v, w) { return Math.max(minX, Math.min(sw - w - Theme.frame, v)); }
+    function clampY(v, h) { return Math.max(minY, Math.min(sh - h - Theme.frame, v)); }
+    readonly property real placedX: {
+        const a = entry.ax || "left", o = entry.x || 0;
+        return clampX(a === "right" ? sw - vw - o : a === "center" ? (sw - vw) / 2 + o : o, vw);
+    }
+    readonly property real placedY: {
+        const a = entry.ay || "top", o = entry.y || 0;
+        return clampY(a === "bottom" ? sh - vh - o : a === "center" ? (sh - vh) / 2 + o : o, vh);
+    }
+    // top-left px on this screen (size w × h on screen) → anchored entry fields
+    function anchored(px, py, w, h, snap) {
+        if (snap) { px = Widgets.snap(px); py = Widgets.snap(py); }
+        px = clampX(px, w); py = clampY(py, h);
+        const cx = px + w / 2, cy = py + h / 2;
+        const ax = cx < sw / 3 ? "left" : cx > sw * 2 / 3 ? "right" : "center";
+        const ay = cy < sh / 3 ? "top" : cy > sh * 2 / 3 ? "bottom" : "center";
+        return { ax: ax, x: Math.round(ax === "left" ? px : ax === "right" ? sw - w - px : cx - sw / 2),
+                 ay: ay, y: Math.round(ay === "top" ? py : ay === "bottom" ? sh - h - py : cy - sh / 2) };
+    }
+    // while resizing, hold the top-left still; the anchor is recomputed on release
+    property bool pinned: false
+    property real pinX: 0
+    property real pinY: 0
+    function pin() { pinX = x; pinY = y; pinned = true; }
+    x: pinned ? pinX : placedX
+    y: pinned ? pinY : placedY
+
+    // old absolute layout → anchors, measured on the largest screen (where it was made)
+    Timer {
+        running: frame.migrate && frame.entry.ax === undefined && frame.sw > 0
+        interval: 400
+        onTriggered: Widgets.update(frame.entry.id, frame.anchored(frame.entry.x || 0, frame.entry.y || 0, frame.vw, frame.vh, false))
+    }
     opacity: entry.opacity !== undefined ? entry.opacity : 1
     scale: entry.scale !== undefined ? entry.scale : 1
     transformOrigin: Item.TopLeft
@@ -86,9 +130,13 @@ Item {
         cursorShape: drag.active ? Qt.ClosedHandCursor : Qt.OpenHandCursor
         drag.target: frame
         drag.threshold: 2
+        drag.minimumX: frame.minX
+        drag.maximumX: Math.max(frame.minX, frame.sw - frame.vw - Theme.frame)
+        drag.minimumY: frame.minY
+        drag.maximumY: Math.max(frame.minY, frame.sh - frame.vh - Theme.frame)
         onPressed: Widgets.selected = frame.entry.id
-        onReleased: if (drag.active || frame.x !== frame.entry.x || frame.y !== frame.entry.y)
-                        Widgets.move(frame.entry.id, Math.max(0, Widgets.snap(frame.x)), Math.max(40, Widgets.snap(frame.y)))
+        onReleased: if (drag.active || frame.x !== frame.placedX || frame.y !== frame.placedY)
+                        Widgets.update(frame.entry.id, frame.anchored(frame.x, frame.y, frame.vw, frame.vh, true))
     }
 
     // resize handle: drag to scale (snaps to 5 %)
@@ -105,13 +153,14 @@ Item {
             cursorShape: Qt.SizeFDiagCursor
             property real startX: 0
             property real startScale: 1
-            onPressed: (m) => { startX = mapToItem(null, m.x, m.y).x; startScale = frame.curScale; Widgets.selected = frame.entry.id; }
+            onPressed: (m) => { startX = mapToItem(null, m.x, m.y).x; startScale = frame.curScale; Widgets.selected = frame.entry.id; frame.pin(); }
             onPositionChanged: (m) => {
                 if (!pressed) return;
                 const dx = mapToItem(null, m.x, m.y).x - startX;
                 frame.scale = Math.max(0.5, Math.min(2.5, Math.round(startScale * (1 + dx / (frame.width * startScale)) * 20) / 20));
             }
-            onReleased: Widgets.update(frame.entry.id, { scale: frame.scale })
+            onReleased: Widgets.update(frame.entry.id, Object.assign({ scale: frame.scale },
+                            frame.anchored(frame.x, frame.y, frame.width * frame.scale, frame.height * frame.scale, false)))
         }
     }
 
@@ -136,6 +185,7 @@ Item {
             property real startSize: 0
             onPressed: (m) => {
                 Widgets.selected = frame.entry.id;
+                frame.pin();
                 const p = mapToItem(null, m.x, m.y);
                 start = eh.vertical ? p.y : p.x;
                 // current content size (unscaled)
@@ -149,9 +199,11 @@ Item {
                 if (eh.vertical) frame.liveH = v; else frame.liveW = v;
             }
             onReleased: {
-                if (eh.vertical && frame.liveH >= 0) Widgets.update(frame.entry.id, { h: frame.liveH });
-                else if (!eh.vertical && frame.liveW >= 0) Widgets.update(frame.entry.id, { w: frame.liveW });
+                const at = frame.anchored(frame.x, frame.y, frame.vw, frame.vh, false);
+                if (eh.vertical && frame.liveH >= 0) Widgets.update(frame.entry.id, Object.assign({ h: frame.liveH }, at));
+                else if (!eh.vertical && frame.liveW >= 0) Widgets.update(frame.entry.id, Object.assign({ w: frame.liveW }, at));
                 frame.liveW = -1; frame.liveH = -1;
+                frame.pinned = false;
             }
             onDoubleClicked: Widgets.update(frame.entry.id, eh.vertical ? { h: undefined } : { w: undefined })
         }

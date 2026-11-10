@@ -3,7 +3,9 @@ pragma ComponentBehavior: Bound
 
 // Desktop widget layout, persisted in ~/.config/sigil/widgets.json.
 //
-// Entry: { id, type, x, y, style, opacity, scale, opts: { … } }
+// Entry: { id, type, ax, x, ay, y, style, opacity, scale, w, h, opts: { … } }
+//   ax/ay:   left|center|right / top|center|bottom; x/y = px from that edge (center: offset
+//            of the widget's centre from the screen's), so the layout fits any screen size
 //   style:   card | glass | bare
 //   opts:    per-type options; the schema lives in ../widgets/types/registry.json
 //
@@ -22,9 +24,9 @@ Singleton {
     property var types: []                       // from registry.json
     readonly property var styles: ["card", "glass", "bare"]
     readonly property var defaults: [
-        { id: 1, type: "calendar", x: 24,  y: 60,  style: "card" },
-        { id: 2, type: "weather",  x: 24,  y: 300, style: "glass" },
-        { id: 3, type: "perf",     x: 260, y: 60,  style: "bare" }
+        { id: 1, type: "calendar", ax: "left",  x: 24,  ay: "top", y: 60,  style: "card" },
+        { id: 2, type: "weather",  ax: "left",  x: 24,  ay: "top", y: 300, style: "glass" },
+        { id: 3, type: "perf",     ax: "right", x: 24,  ay: "top", y: 60,  style: "bare" }
     ]
 
     property var items: []
@@ -100,7 +102,6 @@ Singleton {
         update(id, { opts: o });
     }
     function resetOpts(id) { const w = get(id); if (w) update(id, { opts: defaultOpts(w.type) }); }
-    function move(id, x, y) { update(id, { x: x, y: y }); }
     function cycleStyle(id) {
         const w = get(id);
         if (w) update(id, { style: styles[(styles.indexOf(w.style) + 1) % styles.length] });
@@ -109,7 +110,7 @@ Singleton {
     function nextId() { return items.reduce((m, w) => Math.max(m, w.id), 0) + 1; }
     function add(type, opts) {
         const id = nextId(), n = items.length;
-        items = items.concat([{ id: id, type: type, x: 600 + (n % 4) * 40, y: 200 + (n % 4) * 40, style: "glass",
+        items = items.concat([{ id: id, type: type, ax: "center", x: (n % 4) * 40, ay: "center", y: (n % 4) * 40, style: "glass",
                                 opacity: 1, scale: 1, opts: Object.assign(defaultOpts(type), opts || {}) }]);
         save();
         return id;
@@ -138,7 +139,14 @@ Singleton {
     readonly property var gridSizes: [0, 10, 20, 40]
     function cycleGrid() { Theme.patchSettings({ widgets: { grid: gridSizes[(gridSizes.indexOf(grid) + 1) % gridSizes.length] } }); }
     function snap(v) { return grid > 0 ? Math.round(v / grid) * grid : Math.round(v); }
-    function nudge(id, dx, dy) { const w = get(id); if (w) update(id, { x: Math.max(0, w.x + dx), y: Math.max(40, w.y + dy) }); }
+    // arrow keys: move on screen whatever the anchor (offsets from right / bottom grow inward)
+    function nudge(id, dx, dy) {
+        const w = get(id);
+        if (!w) return;
+        const x = (w.x || 0) + (w.ax === "right" ? -dx : dx), y = (w.y || 0) + (w.ay === "bottom" ? -dy : dy);
+        update(id, { x: w.ax === "center" ? x : Math.max(Theme.frame, x),
+                     y: w.ay === "center" ? y : Math.max(w.ay === "bottom" ? Theme.frame : Theme.barH + Theme.frame, y) });
+    }
     function stepScale(id, d) { const w = get(id); if (w) update(id, { scale: Math.round(Math.max(0.5, Math.min(2.5, (w.scale || 1) + d)) * 100) / 100 }); }
     function stepOpacity(id, d) { const w = get(id); if (w) update(id, { opacity: Math.round(Math.max(0.2, Math.min(1, (w.opacity === undefined ? 1 : w.opacity) + d)) * 100) / 100 }); }
     function selectNext(d) {
