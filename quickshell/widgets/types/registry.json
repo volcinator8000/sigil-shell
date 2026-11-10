@@ -2,7 +2,7 @@
   {
     "type": "calendar",
     "label": "Calendar",
-    "description": "Month grid with today highlighted",
+    "description": "Month grid with events from Google Calendar (or any iCal feed). Click a day for its events; \u2039 \u203a change month",
     "options": [
       {
         "key": "weekStart",
@@ -19,6 +19,21 @@
         "label": "Show week number",
         "kind": "bool",
         "default": true
+      },
+      {
+        "key": "ics",
+        "label": "Calendar feed (Google: Settings \u2192 your calendar \u2192 Secret address in iCal format; several = space separated)",
+        "kind": "string",
+        "default": ""
+      },
+      {
+        "key": "events",
+        "label": "Events listed",
+        "kind": "int",
+        "min": 0,
+        "max": 12,
+        "step": 1,
+        "default": 4
       }
     ]
   },
@@ -44,7 +59,7 @@
   {
     "type": "perf",
     "label": "Performance",
-    "description": "CPU, RAM, GPU and temperature graphs",
+    "description": "CPU, RAM, GPU and temperature graphs, root disk usage. Wider = longer timeline",
     "options": [
       {
         "key": "cpu",
@@ -67,6 +82,12 @@
       {
         "key": "temp",
         "label": "Temperature",
+        "kind": "bool",
+        "default": true
+      },
+      {
+        "key": "disk",
+        "label": "Root disk usage",
         "kind": "bool",
         "default": true
       },

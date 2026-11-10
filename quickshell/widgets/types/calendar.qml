@@ -1,7 +1,12 @@
 pragma ComponentBehavior: Bound
 
+// Month calendar with events from iCal feeds (Google Calendar: Settings → your calendar →
+// "Secret address in iCal format"; paste it in this widget's options). ‹ › change month,
+// click a day for its events; the list below shows the selected day, then what's next.
+// Wider = wider cells and room for locations, taller = more events.
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import qs.services
 import qs.components
 
@@ -12,48 +17,146 @@ Column {
     property var entry: ({})
     function o(k) { return Widgets.opt(entry, k); }
 
-    SystemClock { id: clock; precision: SystemClock.Hours }
-
+    SystemClock { id: clock; precision: SystemClock.Minutes }
     readonly property date today: clock.date
-    readonly property int year: today.getFullYear()
-    readonly property int month: today.getMonth()
-    // ISO week number
+    function key(d) { return Qt.formatDate(d, "yyyy-MM-dd"); }
+    readonly property string todayKey: key(today)
+
+    // shown month (offset from the current one) and selected day
+    property int offset: 0
+    property string selected: todayKey
+    readonly property date shown: new Date(today.getFullYear(), today.getMonth() + offset, 1)
+    readonly property int year: shown.getFullYear()
+    readonly property int month: shown.getMonth()
+
+    // ISO week number of today
     readonly property int week: {
-        const d = new Date(Date.UTC(year, month, today.getDate()));
+        const d = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
         const day = d.getUTCDay() || 7;
         d.setUTCDate(d.getUTCDate() + 4 - day);
         const y0 = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
         return Math.ceil(((d - y0) / 86400000 + 1) / 7);
     }
+    readonly property bool mondayFirst: o("weekStart") !== "sunday"
     readonly property var cells: {
         const first = new Date(year, month, 1);
-        const mondayFirst = root.o("weekStart") !== "sunday";
         const lead = mondayFirst ? (first.getDay() + 6) % 7 : first.getDay();
-        const daysIn = new Date(year, month + 1, 0).getDate();
-        const prevDays = new Date(year, month, 0).getDate();
         const out = [];
-        for (let i = lead; i > 0; i--) out.push({ d: prevDays - i + 1, out: true });
-        for (let d = 1; d <= daysIn; d++) { const dow = new Date(year, month, d).getDay(); out.push({ d: d, out: false, today: d === today.getDate(), we: dow === 0 || dow === 6 }); }
-        let k = 1;
-        while (out.length % 7) out.push({ d: k++, out: true });
+        for (let i = 0; i < 42; i++) {
+            const d = new Date(year, month, 1 - lead + i);
+            if (i >= 35 && d.getMonth() !== month) break;
+            const k = key(d);
+            out.push({ d: d.getDate(), k: k, out: d.getMonth() !== month, today: k === todayKey,
+                       we: d.getDay() === 0 || d.getDay() === 6 });
+        }
         return out;
     }
 
-    WidgetHeader { width: root.w; title: "calendar"; detail: root.o("showWeek") ? "week " + root.week : "" }
+    // ── events ───────────────────────────────────────────────────────
+    readonly property var urls: String(o("ics") || "").split(/\s+/).filter(u => /^(https?|webcal):\/\//.test(u))
+    property var events: []
+    property string error: ""
+    // fetched window: two months back to a year ahead; refetched when navigating outside it
+    property date winFrom: new Date(today.getFullYear(), today.getMonth() - 2, 1)
+    property date winTo: new Date(today.getFullYear(), today.getMonth() + 13, 1)
+    readonly property var byDay: {
+        const m = {};
+        for (const e of events) {
+            // an event covers each day from its start to just before its end
+            const s = new Date(e.start), en = new Date(e.end);
+            const d = new Date(s.getFullYear(), s.getMonth(), s.getDate());
+            let guard = 0;
+            do { (m[key(d)] = m[key(d)] || []).push(e); d.setDate(d.getDate() + 1); }
+            while (d < en && ++guard < 60);
+        }
+        return m;
+    }
+    Process {
+        id: fetch
+        command: [Theme.home + "/.local/bin/sigil-calendar", root.key(root.winFrom), root.key(root.winTo)].concat(root.urls)
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { root.events = JSON.parse(text || "[]"); root.error = ""; }
+                catch (e) { root.error = "feed error"; }
+            }
+        }
+        onExited: (code) => { if (code !== 0) root.error = "feed error"; }
+    }
+    // deferred: when this runs from a urls / window change, `command` has not caught up yet
+    function refresh() { Qt.callLater(() => { if (root.urls.length && !fetch.running) fetch.running = true; }); }
+    onUrlsChanged: refresh()
+    Timer { interval: 15 * 60 * 1000; running: root.urls.length > 0; repeat: true; triggeredOnStart: true; onTriggered: root.refresh() }
+    onShownChanged: {
+        if (shown < winFrom || shown >= new Date(winTo.getFullYear(), winTo.getMonth() - 1, 1)) {
+            winFrom = new Date(year, month - 2, 1);
+            winTo = new Date(year, month + 13, 1);
+            refresh();
+        }
+    }
 
-    WLabel {
-        text: Qt.formatDate(root.today, "MMMM yyyy")
-        font.bold: true
-        font.pixelSize: 13
+    // the list: the selected day's events, then upcoming ones after it
+    readonly property int maxEvents: entry.h ? Math.max(0, Math.floor((entry.h - 260) / 20)) : (o("events") === undefined ? 4 : o("events"))
+    readonly property var listed: {
+        const day = byDay[selected] || [];
+        const out = day.map(e => ({ e: e, day: true }));
+        const after = selected + "T23:59:59";
+        for (const e of events) {
+            if (out.length >= maxEvents) break;
+            if (e.start > after) out.push({ e: e, day: false });
+        }
+        return out.slice(0, Math.max(maxEvents, day.length));
+    }
+    function when(e, dayItem) {
+        const s = new Date(e.start);
+        const t = e.allDay ? "all day" : Qt.formatTime(s, "HH:mm");
+        if (dayItem) return t;
+        const k = key(s);
+        const label = k === todayKey ? "today" : k === key(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)) ? "tmrw" : Qt.formatDate(s, "ddd d");
+        return label + (e.allDay ? "" : " " + t);
+    }
+
+    // ── layout ───────────────────────────────────────────────────────
+    WidgetHeader {
+        width: root.w; title: "calendar"
+        detail: root.error ? root.error : root.o("showWeek") ? "week " + root.week : ""
+    }
+
+    Item {
+        width: root.w
+        height: 20
+        WLabel {
+            anchors.verticalCenter: parent.verticalCenter
+            text: Qt.formatDate(root.shown, "MMMM yyyy")
+            font.bold: true
+            font.pixelSize: 13
+        }
+        Row {
+            anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+            spacing: 2
+            component Nav: WLabel {
+                id: nb
+                signal hit()
+                width: 20; height: 20
+                horizontalAlignment: Text.AlignHCenter
+                color: nh.hovered ? Theme.a1 : Theme.dim
+                font.pixelSize: 13
+                HoverHandler { id: nh; cursorShape: Qt.PointingHandCursor }
+                TapHandler { enabled: !Widgets.editing; onTapped: nb.hit() }
+            }
+            Nav { visible: root.offset !== 0 || root.selected !== root.todayKey; width: 40; text: "today"; font.pixelSize: 10; onHit: { root.offset = 0; root.selected = root.todayKey; } }
+            Nav { text: "‹"; onHit: root.offset-- }
+            Nav { text: "›"; onHit: root.offset++ }
+        }
     }
 
     Grid {
         columns: 7
         columnSpacing: 2
         rowSpacing: 2
+        readonly property real cw: (root.w - 12) / 7
 
         Repeater {
-            model: root.o("weekStart") === "sunday" ? ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"] : ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
+            model: root.mondayFirst ? ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"] : ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
             delegate: WLabel {
                 required property string modelData
                 width: (root.w - 12) / 7
@@ -66,21 +169,95 @@ Column {
         Repeater {
             model: root.cells
             delegate: Rectangle {
+                id: cell
                 required property var modelData
+                readonly property bool sel: modelData.k === root.selected
+                readonly property int count: (root.byDay[modelData.k] || []).length
                 width: (root.w - 12) / 7
-                height: 20
+                height: 22
                 radius: Theme.radius * 0.5
-                color: modelData.today ? Theme.a1 : "transparent"
+                color: modelData.today ? Theme.a1 : ch.hovered && !Widgets.editing ? Theme.alpha(Theme.fg, 0.07) : "transparent"
+                border.width: sel && !modelData.today ? 1 : 0
+                border.color: Theme.alpha(Theme.a1, 0.8)
                 WLabel {
-                    anchors.centerIn: parent
-                    text: parent.modelData.d
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: 2
+                    text: cell.modelData.d
                     font.pixelSize: 11
-                    font.bold: parent.modelData.today === true
-                    color: parent.modelData.today ? Theme.bg
-                         : parent.modelData.out ? Theme.alpha(Theme.dim, 0.45)
-                         : parent.modelData.we ? Theme.a2 : Theme.fg
+                    font.bold: cell.modelData.today === true
+                    color: cell.modelData.today ? Theme.bg
+                         : cell.modelData.out ? Theme.alpha(Theme.dim, 0.45)
+                         : cell.modelData.we ? Theme.a2 : Theme.fg
+                }
+                // one dot per event, up to three
+                Row {
+                    anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 2 }
+                    spacing: 2
+                    Repeater {
+                        model: Math.min(3, cell.count)
+                        delegate: Rectangle { width: 3; height: 3; radius: 1.5; color: cell.modelData.today ? Theme.bg : Theme.a2; opacity: cell.modelData.out ? 0.5 : 1 }
+                    }
+                }
+                HoverHandler { id: ch; enabled: !Widgets.editing; cursorShape: Qt.PointingHandCursor }
+                TapHandler {
+                    enabled: !Widgets.editing
+                    onTapped: {
+                        root.selected = cell.modelData.k;
+                        if (cell.modelData.out) root.offset += cell.modelData.d > 15 ? -1 : 1;
+                    }
                 }
             }
         }
+    }
+
+    // events
+    Column {
+        visible: root.urls.length > 0 && root.maxEvents > 0
+        width: root.w
+        spacing: 2
+        Rectangle { width: root.w; height: 1; color: Theme.alpha(Theme.fg, 0.08) }
+        Item { width: 1; height: 4 }
+        WLabel {
+            visible: (root.byDay[root.selected] || []).length === 0
+            text: (root.selected === root.todayKey ? "nothing today" : "nothing on " + Qt.formatDate(new Date(root.selected + "T12:00:00"), "ddd d MMM")) + (root.listed.length ? " · next:" : "")
+            color: Theme.dim
+            font.pixelSize: 10
+            height: 18
+        }
+        Repeater {
+            model: root.listed
+            delegate: Item {
+                id: ev
+                required property var modelData
+                width: root.w
+                height: 18
+                Rectangle { width: 2; height: 12; radius: 1; anchors.verticalCenter: parent.verticalCenter; color: ev.modelData.day ? Theme.a1 : Theme.alpha(Theme.a2, 0.6) }
+                WLabel {
+                    id: whenL
+                    x: 8
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: ev.modelData.day ? 44 : 78
+                    text: root.when(ev.modelData.e, ev.modelData.day)
+                    color: ev.modelData.day ? Theme.a1 : Theme.dim
+                    font.pixelSize: 10
+                }
+                WLabel {
+                    x: whenL.x + whenL.width
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: root.w - x
+                    elide: Text.ElideRight
+                    text: ev.modelData.e.title + (root.w >= 300 && ev.modelData.e.location ? "  ·  " + ev.modelData.e.location : "")
+                    font.pixelSize: 11
+                }
+            }
+        }
+    }
+    WLabel {
+        visible: root.urls.length === 0 && root.o("hint") !== false
+        width: root.w
+        wrapMode: Text.Wrap
+        text: "link Google Calendar: widget options → calendar feed"
+        color: Theme.alpha(Theme.dim, 0.7)
+        font.pixelSize: 9
     }
 }

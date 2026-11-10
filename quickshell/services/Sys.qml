@@ -1,7 +1,7 @@
 pragma Singleton
 pragma ComponentBehavior: Bound
 
-// CPU / RAM / GPU / temperature sampler. Only runs while something uses it
+// CPU / RAM / GPU / temperature / root disk sampler. Only runs while something uses it
 // (Sys.users > 0), every 1 s on AC and every 4 s on battery.
 
 import QtQuick
@@ -12,13 +12,16 @@ Singleton {
     id: root
 
     property int users: 0
-    readonly property int historyLength: 30
+    // kept long enough for the widest performance widget (it shows the newest N samples)
+    readonly property int historyLength: 300
 
     property real cpu: 0          // %
     property real ramUsed: 0      // GiB
     property real ramTotal: 1     // GiB
     property real gpu: 0          // %
     property real temp: 0         // °C
+    property real diskPct: 0      // root filesystem, % used
+    property string diskText: ""  // "212G / 476G"
     property var cpuHist: []
     property var ramHist: []
     property var gpuHist: []
@@ -48,6 +51,22 @@ Singleton {
     FileView { id: mem; path: "/proc/meminfo"; onLoaded: root.parseMem(text()) }
     FileView { id: tempFile; path: root.tempPath; onLoaded: root.temp = parseInt(text()) / 1000 }
     FileView { id: gpuFile; path: root.gpuPath; onLoaded: root.gpu = parseInt(text()) || 0 }
+
+    // root disk: df once a minute (it barely moves)
+    Process {
+        id: df
+        command: ["df", "-B1", "--output=pcent,used,size", "/"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const f = (text.trim().split("\n")[1] || "").trim().split(/\s+/);
+                if (f.length < 3) return;
+                root.diskPct = parseInt(f[0]) || 0;
+                const g = b => (Number(b) / 1073741824).toFixed(0) + "G";
+                root.diskText = g(f[1]) + " / " + g(f[2]);
+            }
+        }
+    }
+    Timer { interval: 60000; running: root.users > 0; repeat: true; triggeredOnStart: true; onTriggered: df.running = true }
 
     function push(arr, v) { const a = arr.slice(-(historyLength - 1)); a.push(v); return a; }
 

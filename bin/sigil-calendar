@@ -1,0 +1,281 @@
+#!/usr/bin/env python3
+"""sigil-calendar: events from iCal feeds (Google Calendar's "secret address in iCal
+format", Nextcloud, Outlook …) as JSON for the calendar widget.
+
+    sigil-calendar FROM TO URL [URL …]      FROM/TO = YYYY-MM-DD (TO exclusive)
+
+Prints [{"title", "start", "end", "allDay", "location", "cal"}] sorted by start, times in
+local time (ISO, no offset). Feeds are cached in ~/.cache/sigil/calendar; when one cannot
+be fetched the cached copy is used. Recurring events (RRULE with INTERVAL / COUNT / UNTIL /
+BYDAY / BYMONTHDAY, EXDATE, moved or cancelled instances) are expanded. Standard library
+only.
+"""
+import hashlib, json, os, re, sys, urllib.request
+from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
+
+CACHE = os.path.expanduser("~/.cache/sigil/calendar")
+LOCAL = datetime.now().astimezone().tzinfo
+DAYS = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
+
+
+def fetch(url):
+    os.makedirs(CACHE, exist_ok=True)
+    path = os.path.join(CACHE, hashlib.md5(url.encode()).hexdigest() + ".ics")
+    try:
+        url = re.sub(r"^webcal://", "https://", url)
+        req = urllib.request.Request(url, headers={"User-Agent": "sigil-calendar"})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            data = r.read().decode("utf-8", "replace")
+        if "BEGIN:VCALENDAR" in data:
+            with open(path + ".tmp", "w") as f:
+                f.write(data)
+            os.replace(path + ".tmp", path)
+            return data
+    except Exception as e:
+        print(f"sigil-calendar: {url[:60]}…: {e}", file=sys.stderr)
+    try:
+        with open(path) as f:
+            return f.read()
+    except OSError:
+        return ""
+
+
+def unfold(text):
+    return re.sub(r"\r?\n[ \t]", "", text).splitlines()
+
+
+def parse_prop(line):
+    head, _, value = line.partition(":")
+    parts = head.split(";")
+    params = dict(p.split("=", 1) for p in parts[1:] if "=" in p)
+    return parts[0].upper(), params, value
+
+
+def unescape(v):
+    return v.replace("\\n", " ").replace("\\N", " ").replace("\\,", ",").replace("\\;", ";").replace("\\\\", "\\")
+
+
+def to_dt(value, params):
+    """→ (datetime in local time, all_day)"""
+    v = value.strip()
+    if params.get("VALUE") == "DATE" or re.fullmatch(r"\d{8}", v):
+        d = datetime.strptime(v[:8], "%Y%m%d")
+        return d, True
+    if v.endswith("Z"):
+        d = datetime.strptime(v[:15], "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
+    else:
+        d = datetime.strptime(v[:15], "%Y%m%dT%H%M%S")
+        tz = params.get("TZID")
+        try:
+            d = d.replace(tzinfo=ZoneInfo(tz.strip('"'))) if tz else d.replace(tzinfo=LOCAL)
+        except Exception:
+            d = d.replace(tzinfo=LOCAL)
+    return d.astimezone(LOCAL).replace(tzinfo=None), False
+
+
+def duration(v):
+    m = re.fullmatch(r"([+-])?P(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?", v.strip())
+    if not m:
+        return timedelta(0)
+    sign = -1 if m.group(1) == "-" else 1
+    w, d, h, mi, s = (int(x or 0) for x in m.groups()[1:])
+    return sign * timedelta(weeks=w, days=d, hours=h, minutes=mi, seconds=s)
+
+
+def add_months(d, n):
+    y, m = divmod(d.month - 1 + n, 12)
+    y += d.year
+    m += 1
+    try:
+        return d.replace(year=y, month=m)
+    except ValueError:
+        return None   # e.g. the 31st in a 30-day month: skipped, as RFC 5545 says
+
+
+def nth_weekday(year, month, n, wd):
+    """n-th (1-based, negative from the end) weekday wd (0=Mon) of a month, or None."""
+    first = date(year, month, 1)
+    if n > 0:
+        d = first + timedelta(days=(wd - first.weekday()) % 7 + 7 * (n - 1))
+        return d if d.month == month else None
+    nxt = date(year + (month == 12), month % 12 + 1, 1)
+    last = nxt - timedelta(days=1)
+    d = last - timedelta(days=(last.weekday() - wd) % 7 + 7 * (-n - 1))
+    return d if d.month == month else None
+
+
+def expand(start, rule, until_window):
+    """Yield occurrence starts of an RRULE, in order, from `start`."""
+    r = dict(p.split("=", 1) for p in rule.split(";") if "=" in p)
+    freq = r.get("FREQ", "")
+    interval = int(r.get("INTERVAL", 1) or 1)
+    count = int(r["COUNT"]) if "COUNT" in r else None
+    until = None
+    if "UNTIL" in r:
+        until, _ = to_dt(r["UNTIL"], {})
+    byday = [x for x in r.get("BYDAY", "").split(",") if x]
+    bymday = [int(x) for x in r.get("BYMONTHDAY", "").split(",") if x]
+    end = until_window if until is None else min(until_window, until + timedelta(seconds=1))
+    n = 0
+    tod = start.time()
+
+    def emit(d):
+        nonlocal n
+        if d < start:
+            return True
+        if d >= end or (count is not None and n >= count):
+            return False
+        n += 1
+        out.append(d)
+        return True
+
+    out = []
+    if freq == "DAILY":
+        d = start
+        while emit(d) and len(out) < 5000:
+            d += timedelta(days=interval)
+    elif freq == "WEEKLY":
+        days = sorted(DAYS.index(x[-2:]) for x in byday) if byday else [start.weekday()]
+        week = start - timedelta(days=start.weekday())
+        go = True
+        while go and len(out) < 5000:
+            for wd in days:
+                if not emit(datetime.combine((week + timedelta(days=wd)).date(), tod)):
+                    go = False
+                    break
+            week += timedelta(weeks=interval)
+            if week > end:
+                break
+    elif freq in ("MONTHLY", "YEARLY"):
+        step = interval if freq == "MONTHLY" else 12 * interval
+        k = 0
+        go = True
+        while go and len(out) < 5000:
+            base = add_months(start.replace(day=1), k)
+            k += step
+            if base is None:
+                continue
+            if base > end:
+                break
+            cands = []
+            if byday:
+                for x in byday:
+                    m = re.fullmatch(r"([+-]?\d+)?([A-Z]{2})", x)
+                    if not m:
+                        continue
+                    wd = DAYS.index(m.group(2))
+                    if m.group(1):
+                        d = nth_weekday(base.year, base.month, int(m.group(1)), wd)
+                        if d:
+                            cands.append(d)
+                    else:
+                        d = date(base.year, base.month, 1)
+                        while d.month == base.month:
+                            if d.weekday() == wd:
+                                cands.append(d)
+                            d += timedelta(days=1)
+            elif bymday:
+                for md in bymday:
+                    try:
+                        cands.append(date(base.year, base.month, md))
+                    except ValueError:
+                        pass
+            else:
+                if freq == "YEARLY" and base.month != start.month:
+                    continue
+                try:
+                    cands.append(date(base.year, base.month, start.day))
+                except ValueError:
+                    pass
+            if freq == "YEARLY" and (byday or bymday):
+                cands = [c for c in cands if c.month == start.month]
+            for c in sorted(cands):
+                if not emit(datetime.combine(c, tod)):
+                    go = False
+                    break
+    else:
+        emit(start)
+    return out
+
+
+def events(text, cal, lo, hi):
+    out, overrides, masters = [], {}, []
+    cur = None
+    for line in unfold(text):
+        if line == "BEGIN:VEVENT":
+            cur = {"ex": set()}
+            continue
+        if line == "END:VEVENT":
+            if cur and "start" in cur:
+                (overrides.setdefault(cur["uid"], {}).__setitem__(cur["rid"], cur) if cur.get("rid") else masters.append(cur))
+            cur = None
+            continue
+        if cur is None:
+            continue
+        name, params, value = parse_prop(line)
+        if name == "DTSTART":
+            cur["start"], cur["allDay"] = to_dt(value, params)
+        elif name == "DTEND":
+            cur["end"], _ = to_dt(value, params)
+        elif name == "DURATION":
+            cur["dur"] = duration(value)
+        elif name == "SUMMARY":
+            cur["title"] = unescape(value)
+        elif name == "LOCATION":
+            cur["location"] = unescape(value)
+        elif name == "RRULE":
+            cur["rrule"] = value
+        elif name == "EXDATE":
+            for v in value.split(","):
+                cur["ex"].add(to_dt(v, params)[0])
+        elif name == "RECURRENCE-ID":
+            cur["rid"] = to_dt(value, params)[0]
+        elif name == "UID":
+            cur["uid"] = value
+        elif name == "STATUS":
+            cur["cancelled"] = value.upper() == "CANCELLED"
+
+    def add(ev, s):
+        length = ev.get("dur") or ((ev["end"] - ev["start"]) if "end" in ev else (timedelta(days=1) if ev["allDay"] else timedelta(0)))
+        e = s + length
+        if ev.get("cancelled") or e <= lo or s >= hi:
+            return
+        out.append({"title": ev.get("title", "(no title)"), "start": s.isoformat(), "end": e.isoformat(),
+                    "allDay": ev["allDay"], "location": ev.get("location", ""), "cal": cal})
+
+    for ev in masters:
+        ov = overrides.get(ev.get("uid"), {})
+        starts = expand(ev["start"], ev["rrule"], hi) if "rrule" in ev else [ev["start"]]
+        for s in starts:
+            if s in ev["ex"]:
+                continue
+            if s in ov:
+                o = ov.pop(s)
+                o.setdefault("allDay", ev["allDay"])
+                add(o, o["start"])
+            else:
+                add(ev, s)
+        for o in ov.values():           # moved instances whose original slot was outside the rule
+            add(o, o["start"])
+    return out
+
+
+def main():
+    if len(sys.argv) < 4:
+        print(__doc__, file=sys.stderr)
+        sys.exit(1)
+    lo = datetime.fromisoformat(sys.argv[1])
+    hi = datetime.fromisoformat(sys.argv[2])
+    out = []
+    for i, url in enumerate(u for u in sys.argv[3:] if u.strip()):
+        text = fetch(url.strip())
+        if text:
+            m = re.search(r"^X-WR-CALNAME:(.*)$", text, re.M)
+            out += events(text, (m.group(1).strip() if m else f"calendar {i + 1}"), lo, hi)
+    out.sort(key=lambda e: (e["start"], not e["allDay"]))
+    print(json.dumps(out))
+
+
+if __name__ == "__main__":
+    main()

@@ -23,25 +23,60 @@ Column {
         printErrors: false
         onFileChanged: reload()
     }
-    // a set height decides how many lines fit (header 14 + 6, then 15 + 6 per line)
-    readonly property int maxLines: entry.h ? Math.max(1, Math.floor((entry.h - 20 + 6) / 21)) : (o("lines") || 8)
-    readonly property var lines: (file.text() || "empty · click to write").split("\n").filter(l => l.trim()).slice(0, maxLines)
+    // Long lines wrap. Without a set height: the first `lines` lines. With one (bottom edge
+    // handle): as many whole lines as fit, then "+N" in the header.
+    readonly property var all: (file.text() || "empty · click to write").split("\n").filter(l => l.trim())
+    readonly property var lines: entry.h ? all.slice(0, 200) : all.slice(0, o("lines") || 8)
+    readonly property real boxH: entry.h ? Math.max(15, entry.h - 20) : list.implicitHeight
 
-    WidgetHeader { width: root.w; title: "notes"; detail: String(root.o("path") || "").split("/").pop() }
+    WidgetHeader {
+        width: root.w; title: "notes"
+        detail: String(root.o("path") || "").split("/").pop() + (root.hidden > 0 ? " · +" + root.hidden : "")
+    }
 
-    Repeater {
-        model: root.lines
-        delegate: WLabel {
-            required property string modelData
-            readonly property bool done: /^\s*[-*] \[x\]/i.test(modelData)
-            width: root.w
-            height: 15
-            elide: Text.ElideRight
-            text: modelData.replace(/^\s*[-*] \[[ x]\]\s*/i, "").replace(/^\s*[-*]\s*/, "· ").replace(/^#+\s*/, "")
-            color: done ? Theme.dim : Theme.fg
-            font.strikeout: done
-            font.pixelSize: 11
+    property int hidden: 0
+    Item {
+        width: root.w
+        height: root.boxH
+        clip: true
+        Column {
+            id: list
+            width: parent.width
+            spacing: 4
+            Repeater {
+                id: rep
+                model: root.lines
+                delegate: WLabel {
+                    required property string modelData
+                    readonly property bool done: /^\s*[-*] \[x\]/i.test(modelData)
+                    width: root.w
+                    wrapMode: Text.Wrap
+                    verticalAlignment: Text.AlignTop
+                    text: modelData.replace(/^\s*[-*] \[[ x]\]\s*/i, "").replace(/^\s*[-*]\s*/, "· ").replace(/^#+\s*/, "")
+                    color: done ? Theme.dim : Theme.fg
+                    font.strikeout: done
+                    font.pixelSize: 11
+                    // only whole lines: one that would be cut at the bottom is hidden
+                    opacity: y + height <= root.boxH + 0.5 ? 1 : 0
+                }
+            }
         }
+        Timer {
+            id: recount
+            interval: 0
+            onTriggered: {
+                let n = root.all.length - root.lines.length;
+                for (let k = 0; k < rep.count; k++) { const it = rep.itemAt(k); if (it && it.opacity === 0) n++; }
+                root.hidden = Math.max(0, n);
+            }
+        }
+        Connections {
+            target: root
+            function onBoxHChanged() { recount.restart(); }
+            function onLinesChanged() { recount.restart(); }
+            function onWChanged() { recount.restart(); }
+        }
+        Component.onCompleted: recount.restart()
     }
 
     // click → editor (not while arranging widgets)
