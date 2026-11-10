@@ -20,12 +20,25 @@ PanelWindow {
     readonly property var player: Players.active
 
     property real openness: Actions.mediaOpen ? 1 : 0
-    Behavior on openness { NumberAnimation { duration: Actions.mediaOpen ? Theme.dur(220) : Theme.dur(150); easing.type: Actions.mediaOpen ? Easing.OutCubic : Easing.InCubic } }
+    Behavior on openness { NumberAnimation { duration: Actions.mediaOpen ? Theme.dur(340) : Theme.dur(300); easing.type: Actions.mediaOpen ? Easing.OutQuint : Easing.InOutCubic } }
     visible: Actions.mediaOpen || openness > 0.001
     anchors { top: atTop; bottom: !atTop; left: atLeft; right: !atLeft }
-    margins { top: atTop ? Theme.bs(30) + 14 : 0; bottom: atTop ? 0 : 10; left: atLeft ? 10 : 0; right: atLeft ? 0 : 10 }
-    implicitWidth: 320
-    implicitHeight: 110
+    // tucked into the corner, flush with both edges (under the bar at the top)
+    readonly property int fillet: Theme.radius + 2
+    margins { top: atTop ? Theme.bs(30) : 0 }
+    implicitWidth: 320 + fillet
+    implicitHeight: 110 + fillet
+    mask: Region { item: hitArea }
+    readonly property real slideY: (1 - openness) * height * (atTop ? -1 : 1)
+
+    Pocket {
+        anchors.fill: parent
+        atTop: panel.atTop
+        atLeft: panel.atLeft
+        fillet: panel.fillet
+        transform: Translate { y: panel.slideY }
+    }
+    Item { id: hitArea; x: card.x; y: card.y; width: card.width; height: card.height }
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: WlrLayer.Overlay
@@ -40,17 +53,13 @@ PanelWindow {
         function onCornerExited(c) { if (Actions.mediaOpen && c === panel.corner) leftCorner.restart(); }
     }
 
-    Rectangle {
+    Item {
         id: card
-        anchors.fill: parent
-        radius: Theme.radius
-        color: Theme.rich ? Theme.alpha(Theme.s1, 0.86) : Theme.s1
-        border.width: 1
-        border.color: Theme.line
-
-        opacity: panel.openness
-        scale: 0.9 + 0.1 * panel.openness
-        transformOrigin: panel.atTop ? (panel.atLeft ? Item.TopLeft : Item.TopRight) : (panel.atLeft ? Item.BottomLeft : Item.BottomRight)
+        x: panel.atLeft ? 0 : panel.fillet
+        y: panel.atTop ? 0 : panel.fillet
+        width: 320
+        height: 110
+        transform: Translate { y: panel.slideY }
 
         HoverHandler {
             onHoveredChanged: {

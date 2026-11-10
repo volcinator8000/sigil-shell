@@ -41,6 +41,11 @@ PanelWindow {
     property bool preferLeft: false
     readonly property int barGap: Theme.bs(30) + 14
     readonly property bool sheet: fullHeight
+    // pocketable + opened from a hot corner = tucked into that corner, flush with both
+    // edges (Pocket background), sliding out of the screen edge
+    property bool pocketable: false
+    readonly property bool pocket: pocketable && cornerMode && !sheet
+    readonly property bool flush: sheet || pocket
     readonly property int fillet: Theme.radius + 2
 
     // corner mode (latched while open so a closing panel never jumps)
@@ -83,15 +88,15 @@ PanelWindow {
     property real openness: shown ? 1 : 0
     Behavior on openness {
         NumberAnimation {
-            duration: root.sheet ? (root.shown ? Theme.dur(340) : Theme.dur(300)) : (root.shown ? Theme.dur(200) : Theme.dur(140))
-            easing.type: root.sheet ? (root.shown ? Easing.OutQuint : Easing.InOutCubic) : (root.shown ? Easing.OutCubic : Easing.InCubic)
+            duration: root.flush ? (root.shown ? Theme.dur(340) : Theme.dur(300)) : (root.shown ? Theme.dur(200) : Theme.dur(140))
+            easing.type: root.flush ? (root.shown ? Easing.OutQuint : Easing.InOutCubic) : (root.shown ? Easing.OutCubic : Easing.InCubic)
         }
     }
     visible: shown || openness > 0.001
 
     // tell the bar how much of its edge the sheet covers
-    readonly property real span: sheet && visible ? openness * (panelWidth + fillet) : 0
-    onSpanChanged: if (sheet) {
+    readonly property real span: (sheet || (pocket && atTop)) && visible ? openness * (panelWidth + fillet) : 0
+    onSpanChanged: if (sheet || pocket) {
         Actions.sheetLeft = atLeft ? span : 0;
         Actions.sheetRight = atLeft ? 0 : span;
     }
@@ -111,17 +116,17 @@ PanelWindow {
         right: cornerMode || fullHeight ? !atLeft : false
     }
     margins {
-        top: sheet ? Theme.bs(30) : (!cornerMode && placement === "top" && !fullHeight) ? Math.round((screen ? screen.height : 1080) * topFraction) : barGap
-        bottom: sheet ? 0 : 10
-        left: sheet ? 0 : 10
-        right: sheet ? 0 : 10
+        top: sheet || (pocket && atTop) ? Theme.bs(30) : pocket ? 0 : (!cornerMode && placement === "top" && !fullHeight) ? Math.round((screen ? screen.height : 1080) * topFraction) : barGap
+        bottom: flush ? 0 : 10
+        left: flush ? 0 : 10
+        right: flush ? 0 : 10
     }
-    implicitWidth: panelWidth + (sheet ? fillet : 0)
+    implicitWidth: panelWidth + (flush ? fillet : 0)
     // the fillet strip outside the sheet must not eat clicks
     // (an untransformed twin of the panel: a Region does not follow the slide transform,
     //  so tracking `panel` left the input area where the sheet was before it slid in)
     mask: Region { item: hitArea }
-    implicitHeight: panelHeight
+    implicitHeight: panelHeight + (pocket ? fillet : 0)
 
     // click outside → close. Not in corner mode: there the panel closes when the pointer
     // leaves, and a grab would steal the pointer from the corner trigger and loop.
@@ -168,10 +173,20 @@ PanelWindow {
             }
         }
     }
-    // slides the whole sheet (background + content) out past the screen edge
+    Pocket {
+        visible: root.pocket
+        anchors.fill: parent
+        atTop: root.atTop
+        atLeft: root.atLeft
+        fillet: root.fillet
+        transform: Translate { x: slide.x; y: slide.y }
+    }
+
+    // slides the whole sheet / pocket (background + content) out past the screen edge
     QtObject {
         id: slide
         readonly property real x: root.sheet ? (1 - root.openness) * root.width * (root.atLeft ? -1 : 1) : 0
+        readonly property real y: root.pocket ? (1 - root.openness) * root.height * (root.atTop ? -1 : 1) : 0
     }
 
     Item {
@@ -181,13 +196,13 @@ PanelWindow {
 
     Item {
         id: panel
-        x: root.sheet && !root.atLeft ? root.fillet : 0
-        y: 0
-        width: root.sheet ? root.panelWidth : parent.width
-        height: parent.height
-        transform: Translate { x: slide.x }
-        opacity: root.sheet ? 1 : root.openness
-        scale: root.sheet ? 1 : (root.cornerMode ? 0.9 : 0.95) + (root.cornerMode ? 0.1 : 0.05) * root.openness
+        x: root.flush && !root.atLeft ? root.fillet : 0
+        y: root.pocket && !root.atTop ? root.fillet : 0
+        width: root.flush ? root.panelWidth : parent.width
+        height: root.pocket ? root.panelHeight : parent.height
+        transform: Translate { x: slide.x; y: slide.y }
+        opacity: root.flush ? 1 : root.openness
+        scale: root.flush ? 1 : (root.cornerMode ? 0.9 : 0.95) + (root.cornerMode ? 0.1 : 0.05) * root.openness
         transformOrigin: !root.cornerMode ? Item.Center
                        : root.atTop ? (root.atLeft ? Item.TopLeft : Item.TopRight)
                        : (root.atLeft ? Item.BottomLeft : Item.BottomRight)

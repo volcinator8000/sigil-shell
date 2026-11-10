@@ -89,5 +89,7 @@ Singleton {
     IpcHandler {
         target: "shell"
         function run(action: string): void { root.run(action, ""); }
+        // as if from a hot corner (topLeft, topRight, bottomLeft, bottomRight)
+        function runAt(action: string, corner: string): void { root.run(action, corner); }
     }
 }

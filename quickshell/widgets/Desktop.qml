@@ -75,8 +75,9 @@ Scope {
             }
             MouseArea {
                 anchors.fill: parent
-                // edit mode: empty space deselects; peek: closes
-                onClicked: { if (Widgets.editing) Widgets.selected = -1; else Widgets.peek = false; }
+                // edit mode: empty space deselects. Peek stays up until Esc, so the widgets
+                // can be used (clicks on empty space do nothing).
+                onClicked: if (Widgets.editing) Widgets.selected = -1
             }
         }
 
@@ -107,23 +108,6 @@ Scope {
             editing: Widgets.editing
             opacity: raisedWin.openness
             scale: 0.97 + 0.03 * raisedWin.openness
-        }
-
-        // Raised from a hot corner: close once the pointer leaves the corner and the widgets.
-        readonly property bool fromCorner: Widgets.peek && Widgets.peekCorner !== ""
-        readonly property bool inside: raisedCanvas.anyHovered || peekZone.containsMouse
-        property bool armed: false
-        onFromCornerChanged: armed = false
-        onInsideChanged: { if (!fromCorner) return; if (inside) { peekLeave.stop(); armed = true; } else if (armed) peekLeave.restart(); }
-        Timer { id: peekLeave; interval: 300; onTriggered: if (!raisedWin.inside) Widgets.peek = false }
-        MouseArea {
-            id: peekZone
-            visible: raisedWin.fromCorner
-            width: 90; height: 90
-            x: Widgets.peekCorner.endsWith("Left") ? 0 : parent.width - width
-            y: Widgets.peekCorner.startsWith("top") ? 0 : parent.height - height
-            hoverEnabled: true
-            acceptedButtons: Qt.NoButton
         }
 
         // Edit toolbar

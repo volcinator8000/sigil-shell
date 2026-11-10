@@ -11,10 +11,11 @@ import qs.components
 Overlay {
     id: menu
     shown: Actions.powerOpen
-    panelWidth: row.implicitWidth + 28
-    panelHeight: 150 + 28
+    panelWidth: row.implicitWidth + 36
+    panelHeight: 150 + 36
     onDismissed: Actions.powerOpen = false
     requestedCorner: Actions.openCorner
+    pocketable: true
     panelHovered: rowHover.hovered
 
     readonly property var items: [
@@ -36,10 +37,20 @@ Overlay {
         else Quickshell.execDetached(it.cmd);
     }
 
+    // own container when opened by key / click (in a corner the Pocket is the container)
+    Rectangle {
+        visible: !menu.pocket
+        anchors.fill: parent
+        radius: Theme.radius * 1.4
+        color: Theme.surface
+        border.width: 1
+        border.color: Theme.line
+    }
+
     Row {
         id: row
         anchors.centerIn: parent
-        spacing: 16
+        spacing: 12
         focus: true
 
         HoverHandler { id: rowHover }
@@ -67,7 +78,8 @@ Overlay {
                 width: 132
                 height: 150
                 radius: Theme.radius * 1.2
-                color: active ? Theme.alpha(danger ? Theme.crit : Theme.a1, 0.14) : Theme.alpha(Theme.s1, 0.9)
+                // solid: tinted towards the accent, never see-through
+                color: active ? Qt.tint(Theme.s2, Theme.alpha(danger ? Theme.crit : Theme.a1, 0.16)) : Theme.s2
                 border.width: 1
                 border.color: active ? (danger ? Theme.crit : Theme.a1) : Theme.line
                 scale: active ? 1.04 : 1
@@ -81,7 +93,7 @@ Overlay {
                     anchors.margins: -6
                     radius: parent.radius + 6
                     color: Theme.alpha(card.danger ? Theme.crit : Theme.a1, 0.12)
-                    visible: card.active && Theme.rich
+                    visible: false
                 }
 
                 Column {
