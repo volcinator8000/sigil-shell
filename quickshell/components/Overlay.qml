@@ -39,14 +39,14 @@ PanelWindow {
     property real topFraction: 0.18
     property bool fullHeight: false
     property bool preferLeft: false
-    readonly property int barGap: Theme.bs(30) + 14
+    readonly property int barGap: Theme.barH + Theme.gap
     readonly property bool sheet: fullHeight
     // pocketable + opened from a hot corner = tucked into that corner, flush with both
     // edges (Pocket background), sliding out of the screen edge
     property bool pocketable: false
     readonly property bool pocket: pocketable && cornerMode && !sheet
     readonly property bool flush: sheet || pocket
-    readonly property int fillet: Theme.radius + 2
+    readonly property int fillet: Theme.frameRadius
 
     // corner mode (latched while open so a closing panel never jumps)
     property string requestedCorner: ""
@@ -94,13 +94,6 @@ PanelWindow {
     }
     visible: shown || openness > 0.001
 
-    // tell the bar how much of its edge the sheet covers
-    readonly property real span: (sheet || (pocket && atTop)) && visible ? openness * (panelWidth + fillet) : 0
-    onSpanChanged: if (sheet || pocket) {
-        Actions.sheetLeft = atLeft ? span : 0;
-        Actions.sheetRight = atLeft ? 0 : span;
-    }
-
     screen: Quickshell.screens.find(s => Hyprland.focusedMonitor !== null && s.name === Hyprland.focusedMonitor.name) || Quickshell.screens[0]
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
@@ -116,10 +109,11 @@ PanelWindow {
         right: cornerMode || fullHeight ? !atLeft : false
     }
     margins {
-        top: sheet || (pocket && atTop) ? Theme.bs(30) : pocket ? 0 : (!cornerMode && placement === "top" && !fullHeight) ? Math.round((screen ? screen.height : 1080) * topFraction) : barGap
-        bottom: flush ? 0 : 10
-        left: flush ? 0 : 10
-        right: flush ? 0 : 10
+        top: sheet || (pocket && atTop) ? Theme.barH : pocket ? 0 : (!cornerMode && placement === "top" && !fullHeight) ? Math.round((screen ? screen.height : 1080) * topFraction) : barGap
+        // flush panels join the screen frame; floating ones keep a gap from it
+        bottom: Theme.frame + (flush ? 0 : Theme.gap)
+        left: Theme.frame + (flush ? 0 : Theme.gap)
+        right: Theme.frame + (flush ? 0 : Theme.gap)
     }
     implicitWidth: panelWidth + (flush ? fillet : 0)
     // the fillet strip outside the sheet must not eat clicks

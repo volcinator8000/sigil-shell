@@ -25,10 +25,7 @@ Singleton {
     signal cornerExited(string corner)
     // which hot corners the pointer is in right now (set by HotCorners)
     property var cornerInside: ({})
-    // side sheet width currently on screen at each edge (the bar merges into it), and the
-    // pointer's x on the bar (-1 = not on the bar)
-    property real sheetLeft: 0
-    property real sheetRight: 0
+    // the pointer's x on the bar (-1 = not on the bar)
     property real barHoverX: -1
     function setCornerInside(c, v) { const o = Object.assign({}, cornerInside); o[c] = v; cornerInside = o; if (!v) cornerExited(c); }
 

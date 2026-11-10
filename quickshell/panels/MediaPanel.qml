@@ -24,8 +24,8 @@ PanelWindow {
     visible: Actions.mediaOpen || openness > 0.001
     anchors { top: atTop; bottom: !atTop; left: atLeft; right: !atLeft }
     // tucked into the corner, flush with both edges (under the bar at the top)
-    readonly property int fillet: Theme.radius + 2
-    margins { top: atTop ? Theme.bs(30) : 0 }
+    readonly property int fillet: Theme.frameRadius
+    margins { top: atTop ? Theme.barH : 0; bottom: Theme.frame; left: Theme.frame; right: Theme.frame }
     implicitWidth: 320 + fillet
     implicitHeight: 110 + fillet
     mask: Region { item: hitArea }

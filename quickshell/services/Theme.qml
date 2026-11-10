@@ -29,6 +29,12 @@ Singleton {
     property bool barLyrics: true
     property real barScale: 1.1          // settings.json → bar.scale
     function bs(n) { return Math.round(n * barScale); }
+    // screen frame: bar on top, a `frame`-px border on the other edges, rounded inside;
+    // floating panels keep `gap` px from it (settings.json → frame, gap)
+    readonly property int barH: bs(30)
+    property int frame: 4
+    property int gap: 6
+    readonly property int frameRadius: radius + 2
     property var wallpapers: ({})        // see services/Wallpapers.qml
     property int widgetGrid: 20          // settings.json → widgets.grid (0 = free placement)
     property var notifications: ({})     // settings.json → notifications { group, timeout, maxPopups, rules: [] }
@@ -116,6 +122,8 @@ Singleton {
         if (s.weather) weather = Object.assign({}, weather, s.weather);
         wallpaperOverride = s.wallpaper || "";
         barLyrics = !(s.bar && s.bar.lyrics === false);
+        frame = s.frame !== undefined ? Math.max(0, Math.min(24, s.frame)) : 4;
+        gap = s.gap !== undefined ? Math.max(0, Math.min(40, s.gap)) : 6;
         barScale = (s.bar && s.bar.scale) ? Math.max(0.8, Math.min(1.6, s.bar.scale)) : 1.1;
         wallpapers = s.wallpapers || {};
         notifications = s.notifications || {};

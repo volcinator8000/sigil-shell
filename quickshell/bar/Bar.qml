@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
-import QtQuick.Shapes
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
@@ -13,12 +12,9 @@ PanelWindow {
     id: bar
 
     anchors { top: true; left: true; right: true }
-    // flush with the screen top; the window reaches `fillet` px lower so the bar's bottom
-    // corners can curve out into the screen edges (inverted radius). Only the bar itself
-    // reserves space and takes input.
-    readonly property int barH: Theme.bs(30)
-    readonly property int fillet: Theme.radius + 2
-    implicitHeight: barH + fillet
+    // flush with the screen top; corners and the hairline under it come from Frame
+    readonly property int barH: Theme.barH
+    implicitHeight: barH
     exclusiveZone: barH
     mask: Region { item: frame }
     color: "transparent"
@@ -28,39 +24,7 @@ PanelWindow {
     property color fill: Theme.surface
     Behavior on fill { ColorAnimation { duration: Theme.dur(300) } }
 
-    // one path for bar + both fillets, so the translucent fill has no seams.
-    // While a side sheet is open (Actions.sheetLeft/Right = its width on screen) the bar
-    // gives up that corner and its hairline there, so bar and sheet read as one surface.
-    readonly property real sL: Actions.sheetLeft
-    readonly property real sR: Actions.sheetRight
-    readonly property real rL: Math.max(0.01, fillet - sL)
-    readonly property real rR: Math.max(0.01, fillet - sR)
-    Shape {
-        anchors.fill: parent
-        preferredRendererType: Shape.CurveRenderer
-        ShapePath {
-            fillColor: bar.fill
-            strokeColor: "transparent"
-            startX: 0; startY: 0
-            PathLine { x: bar.width; y: 0 }
-            PathLine { x: bar.width; y: bar.barH + bar.rR }
-            PathArc { x: bar.width - bar.rR; y: bar.barH; radiusX: bar.rR; radiusY: bar.rR; direction: PathArc.Counterclockwise }
-            PathLine { x: bar.rL; y: bar.barH }
-            PathArc { x: 0; y: bar.barH + bar.rL; radiusX: bar.rL; radiusY: bar.rL; direction: PathArc.Counterclockwise }
-            PathLine { x: 0; y: 0 }
-        }
-        // hairline along the lower contour only
-        ShapePath {
-            fillColor: "transparent"
-            strokeColor: Theme.line
-            strokeWidth: 1
-            startX: bar.sR > 0 ? bar.width - bar.sR : bar.width - 0.5
-            startY: bar.sR > 0 ? bar.barH - 0.5 : bar.barH + bar.fillet
-            PathArc { x: bar.sR > 0 ? bar.width - bar.sR : bar.width - bar.fillet; y: bar.barH - 0.5; radiusX: bar.fillet - 0.5; radiusY: bar.fillet - 0.5; direction: PathArc.Counterclockwise }
-            PathLine { x: bar.sL > 0 ? bar.sL : bar.fillet; y: bar.barH - 0.5 }
-            PathArc { x: bar.sL > 0 ? bar.sL : 0.5; y: bar.sL > 0 ? bar.barH - 0.5 : bar.barH + bar.fillet; radiusX: bar.fillet - 0.5; radiusY: bar.fillet - 0.5; direction: PathArc.Counterclockwise }
-        }
-    }
+    Rectangle { anchors.fill: parent; color: bar.fill }
 
     Item {
         id: frame

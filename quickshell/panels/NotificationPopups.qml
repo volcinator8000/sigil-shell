@@ -19,7 +19,7 @@ PanelWindow {
     property bool alive: false        // set on the first card, cleared only after the last one has slid out
     visible: alive && !Actions.controlCenterOpen && !Lock.locked
     anchors { top: true; right: true }
-    margins { top: Theme.bs(30) + 14; right: 10 }
+    margins { top: Theme.barH + Theme.gap; right: Theme.frame + Theme.gap }
     implicitWidth: 380
     property real heldHeight: 1
     implicitHeight: model.count > 0 ? Math.max(1, list.contentHeight + 4) : heldHeight

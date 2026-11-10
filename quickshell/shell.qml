@@ -24,6 +24,7 @@ ShellRoot {
             required property ShellScreen modelData
 
             Bar { screen: perScreen.modelData }
+            Frame { screen: perScreen.modelData }
             HotCorners { screen: perScreen.modelData }
             Desktop { screen: perScreen.modelData }
             Wallpaper { screen: perScreen.modelData }
