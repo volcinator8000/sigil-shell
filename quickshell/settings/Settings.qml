@@ -62,6 +62,10 @@ Scope {
         if (l && l.item && typeof l.item.refresh === "function") l.item.refresh();
     }
 
+    Connections {
+        target: Actions
+        function onToggleSettings() { if (root.shown) root.hide(); else root.show(); }
+    }
     IpcHandler {
         target: "settings"
         function toggle(): void {

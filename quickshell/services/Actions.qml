@@ -7,6 +7,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Hyprland
 
 Singleton {
     id: root
@@ -81,9 +82,29 @@ Singleton {
         case "dashboard":     Widgets.peekCorner = corner || ""; Widgets.togglePeek(); break;
         case "media":         { const o = !mediaOpen; mediaCorner = corner || "bottomLeft"; closeAll(); mediaOpen = o; break; }
         case "lock":          closeAll(); Lock.lock(); break;
-        case "settings":      closeAll(); Quickshell.execDetached(["qs", "-c", "sigil", "ipc", "call", "settings", "toggle"]); break;
+        case "settings":      closeAll(); toggleSettings(); break;
         case "close":         closeAll(); break;
         default: console.warn("sigil: unknown action", action);
+        }
+    }
+
+    signal toggleSettings()     // Settings.qml listens (no `qs ipc` round trip)
+
+    // Keybinds land here directly as Hyprland global shortcuts:
+    //   hl.bind("SUPER + N", hl.dsp.global("sigil:controlcenter"))
+    // No process per key press (`sigil-do` / `qs ipc` start Qt, ~0.25 s each).
+    Variants {
+        model: ["launcher", "emoji", "clipboard", "controlcenter", "power", "settings", "media", "dashboard", "overview", "widgets-edit", "widgets-peek"]
+        GlobalShortcut {
+            required property string modelData
+            appid: "sigil"
+            name: modelData
+            description: "sigil-shell: " + modelData
+            onPressed: {
+                if (modelData === "widgets-edit") Widgets.toggleEdit();
+                else if (modelData === "widgets-peek") { Widgets.peekCorner = ""; Widgets.togglePeek(); }
+                else root.run(modelData, "");
+            }
         }
     }
 
