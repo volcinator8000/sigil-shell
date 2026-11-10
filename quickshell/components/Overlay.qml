@@ -94,6 +94,7 @@ PanelWindow {
     }
     visible: shown || openness > 0.001
 
+
     screen: Quickshell.screens.find(s => Hyprland.focusedMonitor !== null && s.name === Hyprland.focusedMonitor.name) || Quickshell.screens[0]
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
@@ -110,17 +111,21 @@ PanelWindow {
     }
     margins {
         top: sheet || (pocket && atTop) ? Theme.barH : pocket ? 0 : (!cornerMode && placement === "top" && !fullHeight) ? Math.round((screen ? screen.height : 1080) * topFraction) : barGap
-        // flush panels join the screen frame; floating ones keep a gap from it
-        bottom: Theme.frame + (flush ? 0 : Theme.gap)
-        left: Theme.frame + (flush ? 0 : Theme.gap)
-        right: Theme.frame + (flush ? 0 : Theme.gap)
+        // flush panels reach the screen edge and cover the frame strip there (their curves
+        // meet the frame's inner edge); floating ones keep a gap from the frame
+        bottom: flush ? 0 : Theme.frame + Theme.gap
+        left: flush ? 0 : Theme.frame + Theme.gap
+        right: flush ? 0 : Theme.frame + Theme.gap
     }
-    implicitWidth: panelWidth + (flush ? fillet : 0)
+    // frame strip covered on the side edge and (unless under the bar) the bottom edge
+    readonly property int insetX: flush ? Theme.frame : 0
+    readonly property int insetY: (sheet || (pocket && !atTop)) ? Theme.frame : 0
+    implicitWidth: panelWidth + (flush ? fillet + insetX : 0)
     // the fillet strip outside the sheet must not eat clicks
     // (an untransformed twin of the panel: a Region does not follow the slide transform,
     //  so tracking `panel` left the input area where the sheet was before it slid in)
     mask: Region { item: hitArea }
-    implicitHeight: panelHeight + (pocket ? fillet : 0)
+    implicitHeight: panelHeight + (pocket ? fillet + insetY : 0)
 
     // click outside → close. Not in corner mode: there the panel closes when the pointer
     // leaves, and a grab would steal the pointer from the corner trigger and loop.
@@ -152,7 +157,8 @@ PanelWindow {
                 PathLine { x: sheetBg.px(sheetBg.ww); y: 0 }
                 PathLine { x: sheetBg.px(sheetBg.ww); y: sheetBg.hh }
                 PathLine { x: sheetBg.px(0); y: sheetBg.hh }
-                PathArc { x: sheetBg.px(sheetBg.r); y: sheetBg.hh - sheetBg.r; radiusX: sheetBg.r; radiusY: sheetBg.r; direction: sheetBg.dir }
+                PathLine { x: sheetBg.px(0); y: sheetBg.hh - root.insetY }
+                PathArc { x: sheetBg.px(sheetBg.r); y: sheetBg.hh - root.insetY - sheetBg.r; radiusX: sheetBg.r; radiusY: sheetBg.r; direction: sheetBg.dir }
                 PathLine { x: sheetBg.px(sheetBg.r); y: sheetBg.r }
                 PathArc { x: sheetBg.px(0); y: 0; radiusX: sheetBg.r; radiusY: sheetBg.r; direction: sheetBg.dir }
             }
@@ -160,8 +166,8 @@ PanelWindow {
                 fillColor: "transparent"
                 strokeColor: Theme.line
                 strokeWidth: 1
-                startX: sheetBg.px(0); startY: sheetBg.hh
-                PathArc { x: sheetBg.px(sheetBg.r + 0.5); y: sheetBg.hh - sheetBg.r; radiusX: sheetBg.r; radiusY: sheetBg.r; direction: sheetBg.dir }
+                startX: sheetBg.px(0); startY: sheetBg.hh - root.insetY
+                PathArc { x: sheetBg.px(sheetBg.r + 0.5); y: sheetBg.hh - root.insetY - sheetBg.r; radiusX: sheetBg.r; radiusY: sheetBg.r; direction: sheetBg.dir }
                 PathLine { x: sheetBg.px(sheetBg.r + 0.5); y: sheetBg.r }
                 PathArc { x: sheetBg.px(0); y: 0; radiusX: sheetBg.r; radiusY: sheetBg.r; direction: sheetBg.dir }
             }
@@ -190,10 +196,10 @@ PanelWindow {
 
     Item {
         id: panel
-        x: root.flush && !root.atLeft ? root.fillet : 0
+        x: root.flush ? (root.atLeft ? root.insetX : root.fillet) : 0
         y: root.pocket && !root.atTop ? root.fillet : 0
         width: root.flush ? root.panelWidth : parent.width
-        height: root.pocket ? root.panelHeight : parent.height
+        height: root.pocket ? root.panelHeight : root.sheet ? parent.height - root.insetY : parent.height
         transform: Translate { x: slide.x; y: slide.y }
         opacity: root.flush ? 1 : root.openness
         scale: root.flush ? 1 : (root.cornerMode ? 0.9 : 0.95) + (root.cornerMode ? 0.1 : 0.05) * root.openness

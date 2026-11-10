@@ -25,9 +25,12 @@ PanelWindow {
     anchors { top: atTop; bottom: !atTop; left: atLeft; right: !atLeft }
     // tucked into the corner, flush with both edges (under the bar at the top)
     readonly property int fillet: Theme.frameRadius
-    margins { top: atTop ? Theme.barH : 0; bottom: Theme.frame; left: Theme.frame; right: Theme.frame }
-    implicitWidth: 320 + fillet
-    implicitHeight: 110 + fillet
+    // reaches the screen edges and covers the frame strip there (Pocket insets its curves)
+    readonly property int ix: Theme.frame
+    readonly property int iy: atTop ? 0 : Theme.frame
+    margins { top: atTop ? Theme.barH : 0 }
+    implicitWidth: 320 + fillet + ix
+    implicitHeight: 110 + fillet + iy
     mask: Region { item: hitArea }
     readonly property real slideY: (1 - openness) * height * (atTop ? -1 : 1)
 
@@ -55,7 +58,7 @@ PanelWindow {
 
     Item {
         id: card
-        x: panel.atLeft ? 0 : panel.fillet
+        x: panel.atLeft ? panel.ix : panel.fillet
         y: panel.atTop ? 0 : panel.fillet
         width: 320
         height: 110

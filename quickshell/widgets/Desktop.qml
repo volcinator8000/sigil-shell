@@ -76,9 +76,9 @@ Scope {
             }
             MouseArea {
                 anchors.fill: parent
-                // edit mode: empty space deselects. Peek stays up until Esc, so the widgets
-                // can be used (clicks on empty space do nothing).
-                onClicked: if (Widgets.editing) Widgets.selected = -1
+                // edit mode: empty space deselects. Peek: the widgets stay usable (it never closes
+                // on pointer leave); a click on empty space or Esc closes it.
+                onClicked: { if (Widgets.editing) Widgets.selected = -1; else Widgets.peek = false; }
             }
         }
 
