@@ -32,6 +32,9 @@ Singleton {
     property bool peek: false         // widgets raised above windows (dashboard corner)
     property string peekCorner: ""    // corner that raised them ("" = key / clock click)
     property int selected: -1         // widget id highlighted from the settings page
+    property bool pageOpen: false     // the settings Widgets page is on screen (it highlights `selected`)
+    // leaving edit mode by any route (Esc, keybind, toolbar) drops the selection outline
+    onEditingChanged: if (!editing && !pageOpen) selected = -1
     property bool ignoreNextChange: false
 
     // Can anyone see the widgets right now? Raised (edit / peek), or no windows on the

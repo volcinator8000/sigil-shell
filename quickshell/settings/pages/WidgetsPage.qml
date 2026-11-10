@@ -28,8 +28,8 @@ PageView {
     property bool creating: false
 
     // outline the selected widget on the desktop only while this page is on screen
-    onPageActiveChanged: Widgets.selected = pageActive ? sel : -1
-    Component.onDestruction: Widgets.selected = -1
+    onPageActiveChanged: { Widgets.pageOpen = pageActive; Widgets.selected = pageActive ? sel : -1; }
+    Component.onDestruction: { Widgets.pageOpen = false; Widgets.selected = -1; }
     Component.onCompleted: if (Widgets.items.length) select(Widgets.items[0].id)
 
     function select(id) {

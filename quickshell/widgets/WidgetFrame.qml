@@ -34,7 +34,8 @@ Item {
         radius: Theme.radius
         color: frame.entry.style === "card" ? Theme.s1
              : frame.entry.style === "glass" ? Theme.alpha(Theme.s1, 0.55) : "transparent"
-        border.width: 1
+        // bare: no outline at all outside edit mode
+        border.width: frame.entry.style === "bare" && !frame.editing ? 0 : 1
         border.color: frame.editing ? Theme.alpha(Theme.a1, 0.7)
                     : frame.entry.style === "card" ? Theme.line
                     : frame.entry.style === "glass" ? Theme.alpha(Theme.fg, 0.10) : "transparent"
@@ -49,7 +50,8 @@ Item {
         color: "transparent"
         border.width: 2
         border.color: Theme.a1
-        visible: Widgets.selected === frame.entry.id
+        // only while arranging or while the settings Widgets page is open
+        visible: Widgets.selected === frame.entry.id && (frame.editing || Widgets.pageOpen)
         opacity: 0.9
     }
 
