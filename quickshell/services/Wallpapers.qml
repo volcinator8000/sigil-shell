@@ -63,6 +63,26 @@ Singleton {
     property string still: ""
     onCurrentChanged: makeStill(current)
 
+    // Blurred copy of the still for "frost" widgets (kitty's look: the wallpaper behind,
+    // blurred like Hyprland's blur size 6 × 2 passes + vibrancy). Made once per wallpaper,
+    // ~/.cache/sigil/frost; widgets show the part behind them, so nothing blurs per frame.
+    property string frost: ""
+    onStillChanged: makeFrost(still)
+    Process {
+        id: frostProc
+        property string out: ""
+        onExited: (code) => { if (code === 0) { root.frost = ""; root.frost = frostProc.out; } }
+    }
+    function makeFrost(p) {
+        if (!p) { frost = ""; return; }
+        frostProc.out = Theme.home + "/.cache/sigil/frost/" + Qt.md5(p) + ".jpg";
+        frostProc.command = ["sh", "-c",
+            '[ -s "$2" ] && [ "$2" -nt "$1" ] && exit 0; mkdir -p "$(dirname "$2")"; ' +
+            'magick "$1[0]" -resize 960x -blur 0x7 -modulate 100,117 -quality 90 "$2.tmp.jpg" && mv "$2.tmp.jpg" "$2"',
+            "sh", p, frostProc.out];
+        frostProc.running = true;
+    }
+
     Process {
         id: stillProc
         property string target: ""

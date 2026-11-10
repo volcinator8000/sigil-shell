@@ -6,7 +6,7 @@ pragma ComponentBehavior: Bound
 // Entry: { id, type, ax, x, ay, y, style, opacity, scale, w, h, opts: { … } }
 //   ax/ay:   left|center|right / top|center|bottom; x/y = px from that edge (center: offset
 //            of the widget's centre from the screen's), so the layout fits any screen size
-//   style:   card | glass | bare
+//   style:   frost (kitty's translucent look) | card | glass | bare
 //   opts:    per-type options; the schema lives in ../widgets/types/registry.json
 //
 // Widget types = ../widgets/types/<type>.qml + an entry in registry.json.
@@ -22,7 +22,7 @@ Singleton {
     id: root
 
     property var types: []                       // from registry.json
-    readonly property var styles: ["card", "glass", "bare"]
+    readonly property var styles: ["frost", "card", "glass", "bare"]
     readonly property var defaults: [
         { id: 1, type: "calendar", ax: "left",  x: 24,  ay: "top", y: 60,  style: "card" },
         { id: 2, type: "weather",  ax: "left",  x: 24,  ay: "top", y: 300, style: "glass" },

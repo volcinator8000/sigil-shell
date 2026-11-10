@@ -81,15 +81,50 @@ Item {
     width: content.item ? content.item.implicitWidth + 24 : 120
     height: content.item ? Math.max(content.item.implicitHeight, setH) + 24 : 60
 
+    // frost: like an empty kitty window — the wallpaper behind it, blurred (Wallpapers.frost
+    // is the whole screen pre-blurred; this shows the part under the widget), under the
+    // terminal background at kitty's background_opacity
+    readonly property bool frosted: entry.style === "frost"
+    Item {
+        id: frostLayer
+        anchors.fill: parent
+        visible: frame.frosted && Wallpapers.frost !== ""
+        layer.enabled: visible
+        layer.effect: MultiEffect {
+            maskEnabled: true
+            maskSource: frostMask
+            maskThresholdMin: 0.5
+            maskSpreadAtMin: 1.0
+        }
+        Image {
+            x: -frame.x / Math.max(0.01, frame.scale)
+            y: -frame.y / Math.max(0.01, frame.scale)
+            width: frame.sw / Math.max(0.01, frame.scale)
+            height: frame.sh / Math.max(0.01, frame.scale)
+            source: frostLayer.visible ? "file://" + Wallpapers.frost : ""
+            fillMode: Image.PreserveAspectCrop
+            asynchronous: true
+            smooth: true
+        }
+    }
+    Rectangle {
+        id: frostMask
+        anchors.fill: parent
+        radius: Theme.radius
+        visible: false
+        layer.enabled: frame.frosted
+    }
+
     Rectangle {
         anchors.fill: parent
         radius: Theme.radius
-        color: frame.entry.style === "card" ? Theme.s1
+        color: frame.frosted ? Theme.alpha(Theme.bg, 0.88)
+             : frame.entry.style === "card" ? Theme.s1
              : frame.entry.style === "glass" ? Theme.alpha(Theme.s1, 0.55) : "transparent"
         // bare: no outline at all outside edit mode
         border.width: frame.entry.style === "bare" && !frame.editing ? 0 : 1
         border.color: frame.editing ? Theme.alpha(Theme.a1, 0.7)
-                    : frame.entry.style === "card" ? Theme.line
+                    : frame.entry.style === "card" || frame.frosted ? Theme.line
                     : frame.entry.style === "glass" ? Theme.alpha(Theme.fg, 0.10) : "transparent"
         Behavior on color { ColorAnimation { duration: Theme.dur(200) } }
     }
