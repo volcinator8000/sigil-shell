@@ -16,7 +16,10 @@ pragma ComponentBehavior: Bound
 //     urgency: "",              // "" | low | normal | critical (override)
 //     group: true,              // false = one card per message
 //     sound: true }
-// Other settings: notifications.group (true), .timeout (6000), .maxPopups (5).
+// Other settings: notifications.group (true), .timeout (6000), .maxPopups (5),
+//   .ownSound: apps that play their own notification sound, so the shell stays quiet for
+//   them (substring of the app name / desktop entry; default: common chat apps). Apps that
+//   send the sound-file / sound-name / suppress-sound hints are covered too.
 
 import QtQuick
 import Quickshell
@@ -36,6 +39,15 @@ Singleton {
     readonly property bool grouping: cfg.group !== false
     readonly property int defaultTimeout: cfg.timeout > 0 ? cfg.timeout : 6000
     readonly property int maxPopups: cfg.maxPopups > 0 ? cfg.maxPopups : 5
+    readonly property var defaultOwnSound: ["vesktop", "discord", "equibop", "legcord", "webcord", "slack", "signal", "telegram", "element", "whatsapp", "teams"]
+    readonly property var ownSound: Array.isArray(cfg.ownSound) ? cfg.ownSound : defaultOwnSound
+    function playsOwnSound(n) {
+        const h = n.hints || {};
+        if (h["suppress-sound"] || h["sound-file"] || h["sound-name"]) return true;
+        const names = ((n.appName || "") + " " + (n.desktopEntry || "")).toLowerCase();
+        return ownSound.some(a => a && names.indexOf(String(a).toLowerCase()) >= 0);
+    }
+    function setOwnSound(list) { Theme.patchSettings({ notifications: { ownSound: list } }); }
 
     readonly property var popupGroups: groupsOf(popups).slice(0, maxPopups)
     readonly property var historyGroups: groupsOf(history)
@@ -73,7 +85,7 @@ Singleton {
             if (root.dnd && !urgent && !(rule && rule.dnd)) return;
             if (n.transient && root.dnd) return;
             if (root.popups.indexOf(n) < 0) root.popups = [n].concat(root.popups).slice(0, 30);
-            if (!rule || rule.sound !== false) Actions.sound(urgent ? "notify-urgent" : "notify", urgent || !!(rule && rule.dnd));
+            if ((!rule || rule.sound !== false) && !root.playsOwnSound(n)) Actions.sound(urgent ? "notify-urgent" : "notify", urgent || !!(rule && rule.dnd));
         }
     }
 

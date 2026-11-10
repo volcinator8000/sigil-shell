@@ -97,7 +97,7 @@ muted, via QtMultimedia + ffmpeg). Needs `qt6-multimedia-ffmpeg` and `kimageform
 - **Battery**: with `animate: "auto"` moving wallpapers play only on AC. On battery,
   behind a fullscreen window or while locked, they show a still frame and the decoder
   is unloaded. Stills are cached in `~/.cache/sigil/stills`.
-- **Rotation** (`settings.json` → `wallpapers`, or the Desktop page): `fixed`; `interval`
+- **Rotation** (`settings.json` → `wallpapers`, or the Wallpaper page): `fixed`; `interval`
   (every N minutes from a folder, shuffled or in order); `schedule`
   (`[{"at": "07:00", "path": "file or folder"}, …]`, where the latest slot at or before now wins).
 - IPC: `qs -c sigil ipc call wallpaper next|prev|set <path>|pause|status`.

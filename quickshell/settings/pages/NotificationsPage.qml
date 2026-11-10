@@ -51,6 +51,53 @@ PageView {
     }
 
     Section {
+        title: "Apps with their own sound"
+        description: "These apps already play a sound when they notify, so the shell's notification sound is skipped for them (Discord, Slack, Signal…). Matched as part of the app name."
+        Flow {
+            Layout.fillWidth: true
+            Layout.margins: 12
+            spacing: 6
+            Repeater {
+                model: Notifs.ownSound
+                delegate: Rectangle {
+                    id: chip
+                    required property string modelData
+                    width: chipRow.implicitWidth + 18
+                    height: 26
+                    radius: 13
+                    color: Theme.alpha(Theme.fg, 0.05)
+                    border.width: 1
+                    border.color: Theme.line
+                    Row {
+                        id: chipRow
+                        anchors.centerIn: parent
+                        spacing: 6
+                        Label { text: chip.modelData; font.pixelSize: 11 }
+                        Label {
+                            text: "\u{F0156}"
+                            color: rm.containsMouse ? Theme.crit : Theme.dim
+                            font.pixelSize: 11
+                            MouseArea { id: rm; anchors.fill: parent; anchors.margins: -4; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                        onClicked: Notifs.setOwnSound(Notifs.ownSound.filter(a => a !== chip.modelData)) }
+                        }
+                    }
+                }
+            }
+            TextField {
+                id: ownField
+                implicitWidth: 150
+                implicitHeight: 26
+                placeholder: "+ add app"
+                onAccepted: {
+                    const a = text.trim().toLowerCase();
+                    if (a && Notifs.ownSound.indexOf(a) < 0) Notifs.setOwnSound(Notifs.ownSound.concat([a]));
+                    text = "";
+                }
+            }
+        }
+    }
+
+    Section {
         title: "App rules"
         description: "Matched against the app name (case-insensitive). Add a pattern to only match some messages, e.g. a regex on the title or body. First match wins; use the arrows to reorder."
         actions: [

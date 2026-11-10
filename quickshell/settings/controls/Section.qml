@@ -15,6 +15,8 @@ ColumnLayout {
     default property alias rows: body.data
     property alias actions: actionRow.data
     property bool card: true
+    readonly property string searchKind: "section"  // found by the settings search
+    function flash() { flashAnim.restart(); }
 
     Layout.fillWidth: true
     spacing: 6
@@ -23,6 +25,7 @@ ColumnLayout {
         Layout.fillWidth: true
         visible: root.title !== "" || actionRow.children.length > 0
         Label {
+            id: heading
             Layout.fillWidth: true
             text: root.title.toUpperCase()
             color: Theme.a1
@@ -53,5 +56,11 @@ ColumnLayout {
             width: parent.width
             spacing: 0
         }
+    }
+    SequentialAnimation {
+        id: flashAnim
+        ColorAnimation { target: heading; property: "color"; to: Theme.fg; duration: Theme.dur(160) }
+        PauseAnimation { duration: 700 }
+        ColorAnimation { target: heading; property: "color"; to: Theme.a1; duration: Theme.dur(500) }
     }
 }

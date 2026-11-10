@@ -40,7 +40,7 @@
   {
     "type": "weather",
     "label": "Weather",
-    "description": "Current conditions from Open-Meteo (location: Shell page). Drag it wider or taller for the week",
+    "description": "Current conditions from Open-Meteo (location: Widgets page). Drag it wider or taller for the week",
     "options": [
       {
         "key": "showForecast",

@@ -17,11 +17,28 @@ Item {
     property color glyphColor: Theme.dim
     property bool divider: y > 0
     default property alias suffix: suffixRow.data
+    readonly property string searchKind: "row"      // found by the settings search
+    function flash() { flashAnim.restart(); }
 
     Layout.fillWidth: true
     implicitWidth: 400
     implicitHeight: Math.max(46, texts.implicitHeight + 20, suffixRow.implicitHeight + 16)
     opacity: enabled ? 1 : 0.45
+
+    // search hit: a brief accent wash
+    Rectangle {
+        id: flashBg
+        anchors { fill: parent; margins: 3 }
+        radius: Math.min(Theme.radius * 0.7, 10)
+        color: Theme.alpha(Theme.a1, 0.16)
+        opacity: 0
+        SequentialAnimation {
+            id: flashAnim
+            NumberAnimation { target: flashBg; property: "opacity"; to: 1; duration: Theme.dur(160) }
+            PauseAnimation { duration: 700 }
+            NumberAnimation { target: flashBg; property: "opacity"; to: 0; duration: Theme.dur(600) }
+        }
+    }
 
     Rectangle {
         visible: row.divider

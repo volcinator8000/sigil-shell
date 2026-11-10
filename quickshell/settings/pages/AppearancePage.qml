@@ -1,6 +1,6 @@
 pragma ComponentBehavior: Bound
 
-// Shell: sigil-shell's own look & behaviour, stored in ~/.config/sigil/settings.json.
+// Appearance: palette, roundness, effects, font and hot corners, stored in ~/.config/sigil/settings.json.
 // Writes are merges (unknown keys survive); Theme watches the file and applies live.
 
 import QtQuick
@@ -20,7 +20,6 @@ PageView {
     property var palettes: []          // [{ id, name, colors }]
     property var fonts: []
     property string fontFilter: ""
-    property string geoStatus: ""
 
     function refresh() { loadPalettes(); }
     Component.onCompleted: { loadPalettes(); loadFonts(); }
@@ -93,25 +92,6 @@ PageView {
     readonly property var filteredFonts: {
         const q = fontFilter.trim().toLowerCase();
         return q ? fonts.filter(f => f.toLowerCase().indexOf(q) >= 0) : fonts;
-    }
-
-    function geocode(city) {
-        city = city.trim();
-        if (!city) return;
-        geoStatus = "looking up " + city + "…";
-        Sh.run(["curl", "-fsS", "--max-time", "8",
-                "https://geocoding-api.open-meteo.com/v1/search?name=" + encodeURIComponent(city) + "&count=1"], (out, rc) => {
-            let r = null;
-            try { r = (JSON.parse(out).results || [])[0] || null; } catch (e) {}
-            if (rc !== 0 || !r) {
-                page.geoStatus = rc !== 0 ? "lookup failed (offline?)" : "no place called \"" + city + "\"";
-                return;
-            }
-            const lat = Math.round(r.latitude * 10000) / 10000, lon = Math.round(r.longitude * 10000) / 10000;
-            page.geoStatus = r.name + (r.admin1 ? ", " + r.admin1 : "") + (r.country ? ", " + r.country : "") + " · " + lat + ", " + lon;
-            page.save({ weather: { city: r.name, lat: lat, lon: lon } });
-            Sh.toast("Weather: " + r.name);
-        }, 12);
     }
 
     // ── palette ──────────────────────────────────────────────────────
@@ -304,22 +284,6 @@ PageView {
                     }
                 }
             }
-        }
-    }
-
-    Section {
-        title: "Weather"
-        SettingRow {
-            title: "Location"
-            subtitle: page.geoStatus || ((Theme.weather.city || "?") + " · " + Theme.weather.lat + ", " + Theme.weather.lon)
-            TextField {
-                id: cityField
-                implicitWidth: 180
-                placeholder: "city"
-                text: Theme.weather.city || ""
-                onAccepted: page.geocode(text)
-            }
-            ActionButton { text: "Look up"; onClicked: page.geocode(cityField.text) }
         }
     }
 }
