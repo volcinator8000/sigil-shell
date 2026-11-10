@@ -36,6 +36,7 @@ ShellRoot {
     ControlCenter {}
     NotificationPopups {}
     PowerMenu {}
+    NoteEditor {}
     Osd {}
     LockScreen {}
     PolkitDialog {}

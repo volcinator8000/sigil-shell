@@ -25,7 +25,7 @@
   {
     "type": "weather",
     "label": "Weather",
-    "description": "Current conditions from Open-Meteo (location: Shell page)",
+    "description": "Current conditions from Open-Meteo (location: Shell page). Drag it wider or taller for the week",
     "options": [
       {
         "key": "showForecast",
@@ -118,7 +118,7 @@
   {
     "type": "notes",
     "label": "Notes",
-    "description": "First lines of a Markdown file; [x] items are struck through",
+    "description": "First lines of a Markdown file; [x] items are struck through. Click to edit; drag its edges for more lines / longer lines",
     "options": [
       {
         "key": "path",

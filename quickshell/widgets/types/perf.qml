@@ -7,7 +7,7 @@ import qs.components
 Column {
     id: root
     spacing: 7
-    readonly property int w: o("width") || 276
+    readonly property int w: Math.max(200, entry.w || o("width") || 276)
     property var entry: ({})
     function o(k) { return Widgets.opt(entry, k); }
 
@@ -32,9 +32,9 @@ Column {
         property real hi: 100
         property color tint: Theme.a1
         spacing: 8
-        Label { width: 34; text: m.name; color: Theme.dim; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
+        WLabel { width: 34; text: m.name; color: Theme.dim; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
         Sparkline { width: root.w - 34 - 46 - 16; height: 20; values: m.values; minValue: m.lo; maxValue: m.hi; lineColor: m.tint }
-        Label { width: 46; horizontalAlignment: Text.AlignRight; text: m.value; color: m.tint === Theme.warn ? Theme.warn : Theme.fg; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
+        WLabel { width: 46; horizontalAlignment: Text.AlignRight; text: m.value; color: m.tint === Theme.warn ? Theme.warn : Theme.fg; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
     }
 
     Metric { visible: root.o("cpu") !== false; name: "cpu"; values: Sys.cpuHist; value: Math.round(Sys.cpu) + "%" }

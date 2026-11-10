@@ -18,6 +18,9 @@ Singleton {
     property bool controlCenterOpen: false
     property bool powerOpen: false
     property bool mediaOpen: false
+    // file open in the note editor ("" = closed); the notes widget opens it on click
+    property string notePath: ""
+    function openNote(p) { closeAll(); notePath = p; sound("open"); }
     property string mediaCorner: "bottomLeft"
     // Hot corner that opened the current panel ("" when opened by key / click).
     // Panels opened from a corner sit at that corner and close once the pointer leaves both.
@@ -53,6 +56,7 @@ Singleton {
         controlCenterOpen = false;
         powerOpen = false;
         mediaOpen = false;
+        notePath = "";
     }
 
     function openLauncher(mode) {
@@ -88,5 +92,6 @@ Singleton {
         function run(action: string): void { root.run(action, ""); }
         // as if from a hot corner (topLeft, topRight, bottomLeft, bottomRight)
         function runAt(action: string, corner: string): void { root.run(action, corner); }
+        function note(path: string): void { root.openNote(path.replace(/^~/, Theme.home)); }
     }
 }

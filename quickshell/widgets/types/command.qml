@@ -12,7 +12,7 @@ Column {
     id: root
     property var entry: ({})
     function o(k) { return Widgets.opt(entry, k); }
-    readonly property int w: 220
+    readonly property int w: Math.max(220, entry.w || 0)
     spacing: 6
     property string output: ""
     property bool failed: false
@@ -33,7 +33,7 @@ Column {
     onEntryChanged: if (!proc.running) proc.running = true
 
     WidgetHeader { width: root.w; title: String(root.o("title") || "command"); detail: root.failed ? "error" : "" }
-    Label {
+    WLabel {
         width: root.w
         text: root.output.split("\n").slice(0, root.o("lines") || 6).join("\n") || "…"
         wrapMode: Text.Wrap

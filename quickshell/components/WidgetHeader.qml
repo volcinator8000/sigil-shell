@@ -8,14 +8,14 @@ Item {
     implicitHeight: 14
     implicitWidth: 120
 
-    Label {
+    WLabel {
         anchors.left: parent.left
         text: root.title.toUpperCase()
         color: Theme.dim
         font.pixelSize: 10
         font.letterSpacing: 1.4
     }
-    Label {
+    WLabel {
         anchors.right: parent.right
         text: root.detail.toUpperCase()
         color: Theme.a2

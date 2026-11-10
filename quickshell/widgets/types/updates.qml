@@ -9,7 +9,7 @@ import qs.components
 Column {
     id: root
     spacing: 7
-    readonly property int w: 230
+    readonly property int w: Math.max(230, entry.w || 0)
     property var entry: ({})
     function o(k) { return Widgets.opt(entry, k); }
     readonly property int rows: o("rows")
@@ -24,7 +24,7 @@ Column {
 
     Row {
         spacing: 10
-        Label {
+        WLabel {
             text: Updates.upgrading ? "…" : Updates.state === "unknown" ? "—" : String(Updates.count)
             font.pixelSize: 34
             font.bold: true
@@ -32,8 +32,8 @@ Column {
         }
         Column {
             anchors.verticalCenter: parent.verticalCenter
-            Label { text: Updates.upgrading ? "upgrading" : Updates.count ? "pending" : Updates.state === "unknown" ? "not checked" : "up to date"; font.pixelSize: 11 }
-            Label { text: "repo " + Updates.repo + "  ·  aur " + Updates.aur; color: Theme.dim; font.pixelSize: 10 }
+            WLabel { text: Updates.upgrading ? "upgrading" : Updates.count ? "pending" : Updates.state === "unknown" ? "not checked" : "up to date"; font.pixelSize: 11 }
+            WLabel { text: "repo " + Updates.repo + "  ·  aur " + Updates.aur; color: Theme.dim; font.pixelSize: 10 }
         }
     }
 
@@ -42,11 +42,11 @@ Column {
         delegate: Row {
             required property var modelData
             width: root.w
-            Label { width: root.w * 0.55; elide: Text.ElideRight; text: parent.modelData.name; font.pixelSize: 10 }
-            Label { width: root.w * 0.45; elide: Text.ElideRight; horizontalAlignment: Text.AlignRight; text: parent.modelData.to; color: Theme.dim; font.pixelSize: 10 }
+            WLabel { width: root.w * 0.55; elide: Text.ElideRight; text: parent.modelData.name; font.pixelSize: 10 }
+            WLabel { width: root.w * 0.45; elide: Text.ElideRight; horizontalAlignment: Text.AlignRight; text: parent.modelData.to; color: Theme.dim; font.pixelSize: 10 }
         }
     }
-    Label {
+    WLabel {
         visible: Updates.packages.length > root.rows && root.rows > 0
         text: "+ " + (Updates.packages.length - root.rows) + " more"
         color: Theme.dim

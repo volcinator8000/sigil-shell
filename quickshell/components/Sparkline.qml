@@ -1,8 +1,10 @@
 import QtQuick
+import QtQuick.Shapes
 import qs.services
 
-// Area sparkline with an emphasised last point.
-Canvas {
+// Area sparkline with an emphasised last point. Vector (Shape), so it stays sharp when
+// the widget around it is scaled.
+Item {
     id: root
     property var values: []
     property real minValue: 0
@@ -11,38 +13,42 @@ Canvas {
 
     implicitHeight: 20
     implicitWidth: 120
-    renderStrategy: Canvas.Cooperative
 
-    onValuesChanged: requestPaint()
-    onLineColorChanged: requestPaint()
-    onWidthChanged: requestPaint()
-
-    onPaint: {
-        const ctx = getContext("2d");
-        ctx.reset();
-        const v = values, n = v.length;
-        if (n < 2) return;
+    readonly property var pts: {
+        const v = values, n = v ? v.length : 0;
+        if (n < 2) return [];
         const w = width, h = height, span = Math.max(1e-6, maxValue - minValue);
-        const px = i => i / (n - 1) * (w - 3);
-        const py = x => h - 1 - Math.max(0, Math.min(1, (x - minValue) / span)) * (h - 3);
+        const out = [];
+        for (let i = 0; i < n; i++)
+            out.push(Qt.point(i / (n - 1) * (w - 3), h - 1 - Math.max(0, Math.min(1, (v[i] - minValue) / span)) * (h - 3)));
+        return out;
+    }
 
-        ctx.beginPath();
-        ctx.moveTo(0, h);
-        for (let i = 0; i < n; i++) ctx.lineTo(px(i), py(v[i]));
-        ctx.lineTo(px(n - 1), h);
-        ctx.closePath();
-        ctx.fillStyle = Qt.rgba(lineColor.r, lineColor.g, lineColor.b, 0.14);
-        ctx.fill();
-
-        ctx.beginPath();
-        for (let i = 0; i < n; i++) i === 0 ? ctx.moveTo(px(i), py(v[i])) : ctx.lineTo(px(i), py(v[i]));
-        ctx.strokeStyle = lineColor;
-        ctx.lineWidth = 1.4;
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.arc(px(n - 1), py(v[n - 1]), 2, 0, Math.PI * 2);
-        ctx.fillStyle = lineColor;
-        ctx.fill();
+    Shape {
+        anchors.fill: parent
+        visible: root.pts.length > 1
+        preferredRendererType: Shape.CurveRenderer
+        ShapePath {
+            fillColor: Theme.alpha(root.lineColor, 0.14)
+            strokeColor: "transparent"
+            PathPolyline {
+                path: root.pts.length > 1 ? [Qt.point(0, root.height)].concat(root.pts, [Qt.point(root.pts[root.pts.length - 1].x, root.height)]) : []
+            }
+        }
+        ShapePath {
+            fillColor: "transparent"
+            strokeColor: root.lineColor
+            strokeWidth: 1.4
+            joinStyle: ShapePath.RoundJoin
+            capStyle: ShapePath.RoundCap
+            PathPolyline { path: root.pts }
+        }
+    }
+    Rectangle {
+        visible: root.pts.length > 1
+        width: 4; height: 4; radius: 2
+        color: root.lineColor
+        x: root.pts.length ? root.pts[root.pts.length - 1].x - 2 : 0
+        y: root.pts.length ? root.pts[root.pts.length - 1].y - 2 : 0
     }
 }

@@ -41,7 +41,8 @@ Scope {
         exclusionMode: ExclusionMode.Ignore
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "sigil-desktop-raised"
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
+        // the note editor opened from a raised notes widget needs the keyboard
+        WlrLayershell.keyboardFocus: Actions.notePath ? WlrKeyboardFocus.None : WlrKeyboardFocus.Exclusive
 
         Rectangle {
             anchors.fill: parent

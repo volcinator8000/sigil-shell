@@ -8,7 +8,7 @@ import qs.components
 Column {
     id: root
     spacing: 8
-    readonly property int w: 196
+    readonly property int w: Math.max(196, entry.w || 0)
     property var entry: ({})
     function o(k) { return Widgets.opt(entry, k); }
 
@@ -41,7 +41,7 @@ Column {
 
     WidgetHeader { width: root.w; title: "calendar"; detail: root.o("showWeek") ? "week " + root.week : "" }
 
-    Label {
+    WLabel {
         text: Qt.formatDate(root.today, "MMMM yyyy")
         font.bold: true
         font.pixelSize: 13
@@ -54,9 +54,9 @@ Column {
 
         Repeater {
             model: root.o("weekStart") === "sunday" ? ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"] : ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
-            delegate: Label {
+            delegate: WLabel {
                 required property string modelData
-                width: 26
+                width: (root.w - 12) / 7
                 horizontalAlignment: Text.AlignHCenter
                 text: modelData
                 color: Theme.dim
@@ -67,11 +67,11 @@ Column {
             model: root.cells
             delegate: Rectangle {
                 required property var modelData
-                width: 26
+                width: (root.w - 12) / 7
                 height: 20
                 radius: Theme.radius * 0.5
                 color: modelData.today ? Theme.a1 : "transparent"
-                Label {
+                WLabel {
                     anchors.centerIn: parent
                     text: parent.modelData.d
                     font.pixelSize: 11

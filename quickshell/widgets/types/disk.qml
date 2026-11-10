@@ -9,7 +9,7 @@ import qs.components
 Column {
     id: root
     spacing: 7
-    readonly property int w: 196
+    readonly property int w: Math.max(196, entry.w || 0)
     property var entry: ({})
     function o(k) { return Widgets.opt(entry, k); }
     property var mounts: []
@@ -36,7 +36,7 @@ Column {
         delegate: Row {
             required property var modelData
             spacing: 8
-            Label { width: 44; text: parent.modelData.name; font.pixelSize: 11 }
+            WLabel { width: 44; text: parent.modelData.name; font.pixelSize: 11 }
             Rectangle {
                 width: root.w - 44 - 34 - 16
                 height: 6
@@ -50,7 +50,7 @@ Column {
                     color: parent.parent.modelData.pct > 90 ? Theme.crit : parent.parent.modelData.pct > 75 ? Theme.warn : Theme.a2
                 }
             }
-            Label { width: 34; horizontalAlignment: Text.AlignRight; text: parent.modelData.pct + "%"; font.pixelSize: 11 }
+            WLabel { width: 34; horizontalAlignment: Text.AlignRight; text: parent.modelData.pct + "%"; font.pixelSize: 11 }
         }
     }
 }

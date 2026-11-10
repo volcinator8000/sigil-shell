@@ -18,8 +18,16 @@ Item {
     opacity: entry.opacity !== undefined ? entry.opacity : 1
     scale: entry.scale !== undefined ? entry.scale : 1
     transformOrigin: Item.TopLeft
+    // Size: the content's own size, or the width / height set by dragging an edge in edit
+    // mode (entry.w / entry.h, content px before scaling). Types read entry.w / entry.h and
+    // lay themselves out for it (notes: more lines, weather: the week, …).
+    property real liveW: -1
+    property real liveH: -1
+    readonly property var liveEntry: (liveW < 0 && liveH < 0) ? entry
+        : Object.assign({}, entry, liveW >= 0 ? { w: liveW } : {}, liveH >= 0 ? { h: liveH } : {})
+    readonly property real setH: liveEntry.h || 0
     width: content.item ? content.item.implicitWidth + 24 : 120
-    height: content.item ? content.item.implicitHeight + 24 : 60
+    height: content.item ? Math.max(content.item.implicitHeight, setH) + 24 : 60
 
     Rectangle {
         anchors.fill: parent
@@ -51,9 +59,11 @@ Item {
         y: 12
         source: Qt.resolvedUrl("types/" + frame.entry.type + ".qml")
         // every type gets its entry (opts live in entry.opts; read them with Widgets.opt(entry, key))
-        onLoaded: item.entry = Qt.binding(() => frame.entry)
+        onLoaded: item.entry = Qt.binding(() => frame.liveEntry)
         // Text on bare widgets gets a soft shadow so it stays readable on any wallpaper.
         layer.enabled: frame.entry.style === "bare" && Theme.rich
+        // render the layer at the scaled size, or it is a small texture stretched (blurry)
+        layer.textureSize: Qt.size(Math.ceil(width * frame.scale), Math.ceil(height * frame.scale))
         layer.effect: MultiEffect {
             shadowEnabled: true
             shadowBlur: 0.5
@@ -102,6 +112,50 @@ Item {
             onReleased: Widgets.update(frame.entry.id, { scale: frame.scale })
         }
     }
+
+    // edge handles: drag to set just the width or just the height; double-click resets
+    component EdgeHandle: Rectangle {
+        id: eh
+        property bool vertical: false     // false = right edge (width), true = bottom edge (height)
+        visible: frame.editing && frame.isSelected
+        width: vertical ? 34 : 6
+        height: vertical ? 6 : 34
+        radius: 3
+        color: ma.containsMouse || ma.pressed ? Theme.a1 : Theme.alpha(Theme.a1, 0.6)
+        x: vertical ? (frame.width - width) / 2 : frame.width - width / 2
+        y: vertical ? frame.height - height / 2 : (frame.height - height) / 2
+        MouseArea {
+            id: ma
+            anchors.fill: parent
+            anchors.margins: -6
+            hoverEnabled: true
+            cursorShape: eh.vertical ? Qt.SizeVerCursor : Qt.SizeHorCursor
+            property real start: 0
+            property real startSize: 0
+            onPressed: (m) => {
+                Widgets.selected = frame.entry.id;
+                const p = mapToItem(null, m.x, m.y);
+                start = eh.vertical ? p.y : p.x;
+                // current content size (unscaled)
+                startSize = eh.vertical ? frame.height - 24 : frame.width - 24;
+            }
+            onPositionChanged: (m) => {
+                if (!pressed) return;
+                const p = mapToItem(null, m.x, m.y);
+                const d = ((eh.vertical ? p.y : p.x) - start) / Math.max(0.1, frame.curScale);
+                const v = Math.max(40, Widgets.snap(startSize + d));
+                if (eh.vertical) frame.liveH = v; else frame.liveW = v;
+            }
+            onReleased: {
+                if (eh.vertical && frame.liveH >= 0) Widgets.update(frame.entry.id, { h: frame.liveH });
+                else if (!eh.vertical && frame.liveW >= 0) Widgets.update(frame.entry.id, { w: frame.liveW });
+                frame.liveW = -1; frame.liveH = -1;
+            }
+            onDoubleClicked: Widgets.update(frame.entry.id, eh.vertical ? { h: undefined } : { w: undefined })
+        }
+    }
+    EdgeHandle {}
+    EdgeHandle { vertical: true }
 
     // toolbar of the selected widget (above it, or below when there is no room)
     Row {

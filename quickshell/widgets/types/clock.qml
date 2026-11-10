@@ -10,10 +10,10 @@ Column {
     spacing: 2
 
     SystemClock { id: clock; precision: root.o("seconds") ? SystemClock.Seconds : SystemClock.Minutes }
-    Label {
+    WLabel {
         text: Qt.formatDateTime(clock.date, (root.o("h12") ? "h:mm" : "HH:mm") + (root.o("seconds") ? ":ss" : "") + (root.o("h12") ? " AP" : ""))
         font.pixelSize: root.o("size") || 44
         font.bold: true
     }
-    Label { visible: root.o("showDate") !== false; text: Qt.formatDate(clock.date, "dddd d MMMM"); color: Theme.dim }
+    WLabel { visible: root.o("showDate") !== false; text: Qt.formatDate(clock.date, "dddd d MMMM"); color: Theme.dim }
 }

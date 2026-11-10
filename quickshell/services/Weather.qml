@@ -20,6 +20,7 @@ Singleton {
     property real high: 0
     property real low: 0
     property var hours: []     // [{ label: "15h", temp: 9 }, ...]
+    property var days: []      // [{ label: "Tue", high: 12, low: 4, code: 61, glyph: "…" }, ...] (7, today first)
 
     readonly property string city: Theme.weather.city || ""
     readonly property string description: describe(code)
@@ -52,8 +53,8 @@ Singleton {
         id: fetch
         command: ["curl", "-sf", "--max-time", "15",
             "https://api.open-meteo.com/v1/forecast?latitude=" + Theme.weather.lat + "&longitude=" + Theme.weather.lon +
-            "&current=temperature_2m,weather_code,is_day&hourly=temperature_2m&daily=temperature_2m_max,temperature_2m_min" +
-            "&timezone=auto&forecast_days=2"]
+            "&current=temperature_2m,weather_code,is_day&hourly=temperature_2m&daily=temperature_2m_max,temperature_2m_min,weather_code" +
+            "&timezone=auto&forecast_days=7"]
         stdout: StdioCollector {
             onStreamFinished: root.parse(text)
         }
@@ -77,6 +78,14 @@ Singleton {
                 if (i < j.hourly.time.length) out.push({ label: j.hourly.time[i].slice(11, 13) + "h", temp: Math.round(j.hourly.temperature_2m[i]) });
             }
             hours = out;
+            const dl = [];
+            for (let i = 0; i < j.daily.time.length; i++) {
+                const d = new Date(j.daily.time[i] + "T12:00:00");
+                const c = j.daily.weather_code ? j.daily.weather_code[i] : 0;
+                dl.push({ label: i === 0 ? "Today" : Qt.formatDate(d, "ddd"), high: Math.round(j.daily.temperature_2m_max[i]),
+                          low: Math.round(j.daily.temperature_2m_min[i]), code: c, glyph: icon(c, true), text: describe(c) });
+            }
+            days = dl;
             ready = true;
             error = "";
         } catch (e) {
