@@ -63,18 +63,18 @@ PanelWindow {
 
         add: Transition {
             ParallelAnimation {
-                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Theme.dur(200); easing.type: Easing.OutCubic }
-                NumberAnimation { property: "x"; from: 48; to: 0; duration: Theme.dur(240); easing.type: Easing.OutCubic }
+                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Theme.dur(240); easing.type: Easing.OutCubic }
+                NumberAnimation { property: "x"; from: 56; to: 0; duration: Theme.dur(340); easing.type: Easing.OutQuint }
             }
         }
         remove: Transition {
             ParallelAnimation {
-                NumberAnimation { property: "opacity"; to: 0; duration: Theme.dur(170); easing.type: Easing.InCubic }
-                NumberAnimation { property: "x"; to: 60; duration: Theme.dur(190); easing.type: Easing.InCubic }
+                NumberAnimation { property: "opacity"; to: 0; duration: Theme.dur(200); easing.type: Easing.InOutCubic }
+                NumberAnimation { property: "x"; to: 60; duration: Theme.dur(220); easing.type: Easing.InOutCubic }
             }
         }
         displaced: Transition {
-            NumberAnimation { properties: "y"; duration: Theme.dur(220); easing.type: Easing.OutCubic }
+            NumberAnimation { properties: "y"; duration: Theme.dur(300); easing.type: Easing.OutQuint }
         }
 
         delegate: NotificationGroup {

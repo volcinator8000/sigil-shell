@@ -154,8 +154,10 @@ Overlay {
                         }
                         Connections {
                             target: cc
-                            function onShownChanged() { if (cc.shown) probe.running = true; }
+                            // after the slide-in: spawning 8 checks as it starts cost frames
+                            function onShownChanged() { if (cc.shown) probeLater.restart(); }
                         }
+                        Timer { id: probeLater; interval: 380; onTriggered: probe.running = true }
                         Component.onCompleted: probe.running = true
 
                         Row {

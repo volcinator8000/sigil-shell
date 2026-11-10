@@ -34,8 +34,11 @@ Item {
             radius: parent.radius
             width: Math.max(height, parent.width * Math.min(1, root.value))
             color: root.dimmed ? Theme.dim : root.tint
+            // glide on outside changes (keys, scroll); follow the pointer exactly while dragging
+            Behavior on width { enabled: !sliderMa.pressed; NumberAnimation { duration: Theme.dur(180); easing.type: Easing.OutCubic } }
         }
         MouseArea {
+            id: sliderMa
             anchors.fill: parent
             anchors.margins: -6
             cursorShape: Qt.PointingHandCursor

@@ -19,7 +19,7 @@ PanelWindow {
 
     screen: Quickshell.screens.find(s => Hyprland.focusedMonitor !== null && s.name === Hyprland.focusedMonitor.name) || Quickshell.screens[0]
     property real openness: shown ? 1 : 0
-    Behavior on openness { NumberAnimation { duration: osd.shown ? Theme.dur(160) : Theme.dur(220); easing.type: osd.shown ? Easing.OutCubic : Easing.InCubic } }
+    Behavior on openness { NumberAnimation { duration: osd.shown ? Theme.dur(240) : Theme.dur(240); easing.type: osd.shown ? Easing.OutQuint : Easing.InOutCubic } }
     visible: shown || openness > 0.001
     anchors.bottom: true
     margins.bottom: 64
@@ -88,7 +88,7 @@ PanelWindow {
                     radius: 3
                     width: parent.width * Math.min(1, osd.level)
                     color: osd.off ? Theme.dim : Theme.a1
-                    Behavior on width { NumberAnimation { duration: Theme.dur(120) } }
+                    Behavior on width { NumberAnimation { duration: Theme.dur(180); easing.type: Easing.OutCubic } }
                 }
             }
             Label {

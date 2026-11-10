@@ -88,8 +88,9 @@ PanelWindow {
     property real openness: shown ? 1 : 0
     Behavior on openness {
         NumberAnimation {
-            duration: root.flush ? (root.shown ? Theme.dur(340) : Theme.dur(300)) : (root.shown ? Theme.dur(200) : Theme.dur(140))
-            easing.type: root.flush ? (root.shown ? Easing.OutQuint : Easing.InOutCubic) : (root.shown ? Easing.OutCubic : Easing.InCubic)
+            duration: root.flush ? (root.shown ? Theme.dur(360) : Theme.dur(280)) : (root.shown ? Theme.dur(280) : Theme.dur(180))
+            // long, decelerating opens; quick, eased closes (no linear motion anywhere)
+            easing.type: root.flush ? (root.shown ? Easing.OutQuint : Easing.InOutCubic) : (root.shown ? Easing.OutQuint : Easing.InOutCubic)
         }
     }
     visible: shown || openness > 0.001

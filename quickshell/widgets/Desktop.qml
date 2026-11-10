@@ -34,7 +34,7 @@ Scope {
         id: raisedWin
         screen: root.screen
         property real openness: root.raised ? 1 : 0
-        Behavior on openness { NumberAnimation { duration: root.raised ? Theme.dur(220) : Theme.dur(160); easing.type: root.raised ? Easing.OutCubic : Easing.InCubic } }
+        Behavior on openness { NumberAnimation { duration: root.raised ? Theme.dur(300) : Theme.dur(200); easing.type: root.raised ? Easing.OutQuint : Easing.InOutCubic } }
         visible: root.raised || openness > 0.001
         anchors { top: true; bottom: true; left: true; right: true }
         color: "transparent"
