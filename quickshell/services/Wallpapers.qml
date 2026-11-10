@@ -107,6 +107,7 @@ Singleton {
                                     && !covered && !Lock.locked
                                     || false
     property bool manualPause: false
+    property var surface: null          // the Wallpaper window (for `ipc call wallpaper status`)
     property string rendered: ""        // set by the front WallSlot: "<kind>:<live|still>:<file>"
     readonly property bool shouldPlay: playing && !manualPause
 
@@ -207,9 +208,12 @@ Singleton {
         function set(path: string): void { root.set(path); }
         function pause(): void { root.manualPause = !root.manualPause; }
         function current(): string { return root.current; }
+        // debugging: hide / show the wallpaper surface
+        function surfaceVisible(on: bool): void { if (root.surface) root.surface.shown = on; }
         function status(): string {
             return JSON.stringify({ current: root.current, kind: root.kind, mode: root.mode, shouldPlay: root.shouldPlay,
-                                    onBattery: UPower.onBattery, covered: root.covered, still: root.still, rendered: root.rendered });
+                                    onBattery: UPower.onBattery, covered: root.covered, still: root.still, rendered: root.rendered,
+                                    surface: root.surface ? root.surface.debugState() : null });
         }
     }
 }

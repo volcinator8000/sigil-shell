@@ -25,6 +25,8 @@ PanelWindow {
     Behavior on fill { ColorAnimation { duration: Theme.dur(300) } }
 
     Rectangle { anchors.fill: parent; color: bar.fill }
+    // hairline along the bottom, between the frame's top corners (they continue it)
+    Rectangle { x: Theme.frame + Theme.frameRadius; y: bar.height - 1; width: bar.width - 2 * x; height: 1; color: Theme.line }
 
     Item {
         id: frame

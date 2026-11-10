@@ -2,8 +2,11 @@ pragma ComponentBehavior: Bound
 
 // Screen frame: a Theme.frame-px border on the left, right and bottom edges, in the bar's
 // colour, with rounded inner corners (the top two curve into the bar). Windows sit inside
-// it: invisible strips reserve the space (the bar's too), the drawing itself takes no input.
-// A side sheet or corner pocket slides in on top and joins the same edges.
+// it: invisible strips reserve the space (the bar's too); the drawing takes no input.
+//
+// Drawn by three thin edge windows, never one full-screen surface: a full-screen
+// transparent layer under windows could keep a stale first buffer (the bar colour over
+// the whole screen), which hid the wallpaper.
 
 import QtQuick
 import QtQuick.Shapes
@@ -15,7 +18,9 @@ Scope {
     id: root
     required property ShellScreen screen
     readonly property int t: Theme.frame
+    readonly property int r: Theme.frameRadius
 
+    // ── space reservation ────────────────────────────────────────────
     component Reserve: PanelWindow {
         screen: root.screen
         color: "transparent"
@@ -32,60 +37,72 @@ Scope {
     Reserve { visible: root.t > 0; anchors { right: true; top: true; bottom: true } }
     Reserve { visible: root.t > 0; anchors { bottom: true; left: true; right: true } }
 
-    PanelWindow {
-        id: win
+    // ── drawing ──────────────────────────────────────────────────────
+    // concave corner piece, drawn for the top-left inner corner and mirrored for the others
+    component Fillet: Shape {
+        id: fil
+        property bool flipX: false
+        property bool flipY: false
+        width: root.r; height: root.r
+        preferredRendererType: Shape.CurveRenderer
+        transform: Scale { origin.x: root.r / 2; origin.y: root.r / 2; xScale: fil.flipX ? -1 : 1; yScale: fil.flipY ? -1 : 1 }
+        ShapePath {
+            fillColor: Theme.surface
+            strokeColor: "transparent"
+            startX: 0; startY: 0
+            PathLine { x: root.r; y: 0 }
+            PathArc { x: 0; y: root.r; radiusX: root.r; radiusY: root.r; direction: PathArc.Counterclockwise }
+            PathLine { x: 0; y: 0 }
+        }
+        ShapePath {
+            fillColor: "transparent"
+            strokeColor: Theme.line
+            strokeWidth: 1
+            startX: root.r; startY: 0.5
+            PathArc { x: 0.5; y: root.r; radiusX: root.r - 0.5; radiusY: root.r - 0.5; direction: PathArc.Counterclockwise }
+        }
+    }
+
+    // left / right edge: the strip plus its two inner corners (window is t + r wide; the
+    // corner area outside the strip is transparent and takes no input)
+    component Side: PanelWindow {
+        id: side
+        property bool isLeft: true
         screen: root.screen
-        anchors { top: true; bottom: true; left: true; right: true }
+        visible: root.t > 0
+        anchors { top: true; bottom: true; left: side.isLeft; right: !side.isLeft }
+        margins.top: Theme.barH
         exclusionMode: ExclusionMode.Ignore
+        implicitWidth: root.t + root.r
         color: "transparent"
         mask: Region {}
         WlrLayershell.namespace: "sigil-frame"
         WlrLayershell.layer: WlrLayer.Bottom
 
-        readonly property real b: Theme.barH
-        readonly property real r: Theme.frameRadius
+        Rectangle { color: Theme.surface; x: side.isLeft ? 0 : side.width - root.t; width: root.t; height: side.height }
+        // hairline on the inner edge, between the corners
+        Rectangle { color: Theme.line; x: side.isLeft ? root.t : side.width - root.t - 1; y: root.r; width: 1; height: side.height - root.t - 2 * root.r }
+        Fillet { x: side.isLeft ? root.t : 0; y: 0; flipX: !side.isLeft }
+        Fillet { x: side.isLeft ? root.t : 0; y: side.height - root.t - root.r; flipX: !side.isLeft; flipY: true }
+    }
+    Side { isLeft: true }
+    Side { isLeft: false }
 
-        // strips + four corner pieces (a single contour with a hole is mis-filled by both
-        // Shape renderers: nothing at all, or the hole too, which hid the wallpaper)
-        Rectangle { color: Theme.surface; x: 0; y: win.b; width: root.t; height: win.height - win.b }
-        Rectangle { color: Theme.surface; x: win.width - root.t; y: win.b; width: root.t; height: win.height - win.b }
-        Rectangle { color: Theme.surface; x: root.t; y: win.height - root.t; width: win.width - 2 * root.t; height: root.t }
-        component Fillet: Shape {
-            id: fil
-            property bool onRight: false
-            property bool onBottom: false
-            width: win.r; height: win.r
-            x: onRight ? win.width - root.t - win.r : root.t
-            y: onBottom ? win.height - root.t - win.r : win.b
-            preferredRendererType: Shape.CurveRenderer
-            // drawn for the top-left corner, mirrored for the others
-            transform: Scale { origin.x: win.r / 2; origin.y: win.r / 2; xScale: fil.onRight ? -1 : 1; yScale: fil.onBottom ? -1 : 1 }
-            ShapePath {
-                fillColor: Theme.surface
-                strokeColor: "transparent"
-                startX: 0; startY: 0
-                PathLine { x: win.r; y: 0 }
-                PathArc { x: 0; y: win.r; radiusX: win.r; radiusY: win.r; direction: PathArc.Counterclockwise }
-                PathLine { x: 0; y: 0 }
-            }
-            ShapePath {
-                fillColor: "transparent"
-                strokeColor: Theme.line
-                strokeWidth: 1
-                startX: win.r; startY: 0.5
-                PathArc { x: 0.5; y: win.r; radiusX: win.r - 0.5; radiusY: win.r - 0.5; direction: PathArc.Counterclockwise }
-            }
-        }
-        Fillet {}
-        Fillet { onRight: true }
-        Fillet { onBottom: true }
-        Fillet { onRight: true; onBottom: true }
+    // bottom edge between the corners (+1 px above it for the hairline)
+    PanelWindow {
+        id: bottom
+        screen: root.screen
+        visible: root.t > 0
+        anchors { bottom: true; left: true; right: true }
+        margins { left: root.t + root.r; right: root.t + root.r }
+        exclusionMode: ExclusionMode.Ignore
+        implicitHeight: root.t + 1
+        color: "transparent"
+        mask: Region {}
+        WlrLayershell.namespace: "sigil-frame"
+        WlrLayershell.layer: WlrLayer.Bottom
 
-        // hairline just inside the inner edge (its top run is the line under the bar);
-        // straight runs here, the curved bits are in the Fillets
-        Rectangle { color: Theme.line; x: root.t + win.r; y: win.b; width: win.width - 2 * (root.t + win.r); height: 1 }
-        Rectangle { color: Theme.line; x: root.t + win.r; y: win.height - root.t - 1; width: win.width - 2 * (root.t + win.r); height: 1 }
-        Rectangle { color: Theme.line; x: root.t; y: win.b + win.r; width: 1; height: win.height - win.b - root.t - 2 * win.r }
-        Rectangle { color: Theme.line; x: win.width - root.t - 1; y: win.b + win.r; width: 1; height: win.height - win.b - root.t - 2 * win.r }
+        Rectangle { color: Theme.line; width: bottom.width; height: 1 }
+        Rectangle { color: Theme.surface; y: 1; width: bottom.width; height: root.t }
     }
 }

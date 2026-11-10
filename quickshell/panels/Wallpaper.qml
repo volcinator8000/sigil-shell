@@ -49,7 +49,18 @@ PanelWindow {
         kick(true);
     }
     onPathChanged: show(path)
-    Component.onCompleted: { slotA.path = path; slotA.opacity = 1; kick(true); }
+    function slotState(s) {
+        const it = s.children.length ? s.children[0].item : null;
+        return { path: s.path.split("/").pop(), ready: s.ready, opacity: s.opacity, visible: s.visible,
+                 item: it ? { status: it.status, w: it.width, h: it.height, src: String(it.source).split("/").pop(),
+                              sw: it.sourceSize ? it.sourceSize.width : -1, pw: it.paintedWidth } : null };
+    }
+    function debugState() {
+        return { shown: shown, visible: visible, w: width, h: height, front: front === slotA ? "A" : "B",
+                 A: slotState(slotA), B: slotState(slotB) };
+    }
+    Component.onDestruction: if (Wallpapers.surface === win) Wallpapers.surface = null
+    Component.onCompleted: { Wallpapers.surface = win; slotA.path = path; slotA.opacity = 1; kick(true); }
 
     // Redraw nudge. Under windows this surface gets no frame callbacks from Hyprland, and Qt
     // can drop the redraw that should follow an image load, leaving the first (empty) frame on
