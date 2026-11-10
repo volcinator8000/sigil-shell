@@ -106,9 +106,9 @@ muted, via QtMultimedia + ffmpeg). Needs `qt6-multimedia-ffmpeg` and `kimageform
 
 | key | action |
 |---|---|
-| SUPER+W | widget edit mode (drag, restyle, add, remove; Esc or *Done* to leave) |
-| SUPER+SHIFT+W | raise widgets above windows |
-| click the clock | same as SUPER+SHIFT+W |
+| SUPER+W | widget overview: raise widgets above windows (Esc or a click on empty space closes) |
+| SUPER+SHIFT+W | widget edit mode (drag, resize, restyle, add, remove; Esc or *Done* to leave) |
+| click the clock | same as SUPER+W |
 
 ## Settings: `~/.config/sigil/settings.json`
 

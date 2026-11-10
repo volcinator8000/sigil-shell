@@ -15,9 +15,9 @@ hl.config({ misc = { allow_session_lock_restore = true } })
 
 -- Emergency: restart the shell (bar gone, panels stuck, …)
 hl.bind("SUPER + CTRL + SHIFT + B", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.local/bin/sigil restart"))
--- Desktop widgets: edit mode / raise above windows
-hl.bind("SUPER + W", hl.dsp.global("sigil:widgets-edit"))
-hl.bind("SUPER + SHIFT + W", hl.dsp.global("sigil:widgets-peek"))
+-- Desktop widgets: raise above windows / edit mode
+hl.bind("SUPER + W", hl.dsp.global("sigil:widgets-peek"))          -- widgets over the windows (Esc / empty click closes)
+hl.bind("SUPER + SHIFT + W", hl.dsp.global("sigil:widgets-edit"))  -- arrange widgets
 
 -- Settings window rules (owned by quickshell/settings)
 pcall(dofile, os.getenv("HOME") .. "/sigil-shell/hypr/sigil-settings.lua")

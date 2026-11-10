@@ -80,7 +80,7 @@ PageView {
     // ── top bar ──────────────────────────────────────────────────────
     Section {
         title: "Desktop"
-        description: "Drag widgets around in arrange mode (SUPER+W); the outline marks the one selected below."
+        description: "Drag widgets around in arrange mode (SUPER+SHIFT+W); the outline marks the one selected below."
         SettingRow {
             title: "Arrange on desktop"
             subtitle: "drag mode on the desktop; this window hides"
