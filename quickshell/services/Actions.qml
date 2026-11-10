@@ -22,6 +22,10 @@ Singleton {
     // file open in the note editor ("" = closed); the notes widget opens it on click
     property string notePath: ""
     function openNote(p) { closeAll(); notePath = p; sound("open"); }
+    // new calendar event for this day ("" = editor closed); calendarChanged tells widgets to refetch
+    property string eventDate: ""
+    signal calendarChanged()
+    function newEvent(d) { closeAll(); eventDate = d || Qt.formatDate(new Date(), "yyyy-MM-dd"); sound("open"); }
     property string mediaCorner: "bottomLeft"
     // Hot corner that opened the current panel ("" when opened by key / click).
     // Panels opened from a corner sit at that corner and close once the pointer leaves both.
@@ -58,6 +62,7 @@ Singleton {
         powerOpen = false;
         mediaOpen = false;
         notePath = "";
+        eventDate = "";
     }
 
     function openLauncher(mode) {
@@ -114,5 +119,6 @@ Singleton {
         // as if from a hot corner (topLeft, topRight, bottomLeft, bottomRight)
         function runAt(action: string, corner: string): void { root.run(action, corner); }
         function note(path: string): void { root.openNote(path.replace(/^~/, Theme.home)); }
+        function newEvent(day: string): void { root.newEvent(day); }
     }
 }

@@ -2,7 +2,10 @@
 """sigil-calendar: events from iCal feeds (Google Calendar's "secret address in iCal
 format", Nextcloud, Outlook …) as JSON for the calendar widget.
 
-    sigil-calendar FROM TO URL [URL …]      FROM/TO = YYYY-MM-DD (TO exclusive)
+    sigil-calendar FROM TO [URL …]          FROM/TO = YYYY-MM-DD (TO exclusive)
+
+When Google Calendar is connected (sigil-gcal auth), its calendars come through the API
+(with colours) and Google iCal URLs are skipped.
 
 Prints [{"title", "start", "end", "allDay", "location", "cal"}] sorted by start, times in
 local time (ISO, no offset). Feeds are cached in ~/.cache/sigil/calendar; when one cannot
@@ -261,14 +264,45 @@ def events(text, cal, lo, hi):
     return out
 
 
+def google(lo, hi):
+    """Events through the Google Calendar API (sigil-gcal), or None when not connected.
+    The last good answer for this window is cached for offline use."""
+    if not os.path.exists(os.path.expanduser("~/.config/sigil/gcal/token.json")):
+        return None
+    cache = os.path.join(CACHE, f"gcal-{lo}-{hi}.json")
+    gcal = os.path.join(os.path.dirname(os.path.realpath(__file__)), "sigil-gcal")
+    try:
+        import subprocess
+        r = subprocess.run([gcal, "events", lo, hi], capture_output=True, text=True, timeout=40)
+        if r.returncode == 0:
+            os.makedirs(CACHE, exist_ok=True)
+            with open(cache, "w") as f:
+                f.write(r.stdout)
+            return json.loads(r.stdout)
+        print("sigil-calendar: google:", r.stderr.strip()[:200], file=sys.stderr)
+    except Exception as e:
+        print("sigil-calendar: google:", e, file=sys.stderr)
+    try:
+        with open(cache) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return []
+
+
 def main():
-    if len(sys.argv) < 4:
+    if len(sys.argv) < 3:
         print(__doc__, file=sys.stderr)
         sys.exit(1)
     lo = datetime.fromisoformat(sys.argv[1])
     hi = datetime.fromisoformat(sys.argv[2])
     out = []
+    g = google(sys.argv[1], sys.argv[2])
+    if g is not None:
+        out += g
     for i, url in enumerate(u for u in sys.argv[3:] if u.strip()):
+        # connected to the API: Google's iCal links would only repeat the same events
+        if g is not None and "calendar.google.com" in url:
+            continue
         text = fetch(url.strip())
         if text:
             m = re.search(r"^X-WR-CALNAME:(.*)$", text, re.M)

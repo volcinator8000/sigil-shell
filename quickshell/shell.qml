@@ -37,6 +37,7 @@ ShellRoot {
     NotificationPopups {}
     PowerMenu {}
     NoteEditor {}
+    EventEditor {}
     Osd {}
     LockScreen {}
     PolkitDialog {}

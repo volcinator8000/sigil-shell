@@ -1,0 +1,251 @@
+#!/usr/bin/env python3
+"""sigil-gcal: Google Calendar for sigil-shell (read + create events). Standard library only.
+
+One-time setup (Google requires your own OAuth client):
+  1. https://console.cloud.google.com → new project → APIs & Services → Library →
+     "Google Calendar API" → Enable
+  2. OAuth consent screen → External → add yourself as a test user → then "Publish app"
+     (in Testing mode Google expires the sign-in after 7 days)
+  3. Credentials → Create credentials → OAuth client ID → Desktop app → Download JSON
+  4. sigil-gcal auth ~/Downloads/client_secret_….json      (opens the browser once)
+
+Commands
+  sigil-gcal status                        ok | not-connected | error: …
+  sigil-gcal auth CLIENT_JSON              sign in (stores ~/.config/sigil/gcal/)
+  sigil-gcal calendars                     [{id, name, color, primary, writable}]
+  sigil-gcal events FROM TO                events of the calendars shown in Google Calendar
+                                           (FROM/TO = YYYY-MM-DD), sigil-calendar's format + color
+  sigil-gcal add JSON                      {calendar, title, date, allDay, start, end,
+                                            location, description}  (start/end = HH:MM)
+  sigil-gcal logout
+"""
+import base64, hashlib, http.server, json, os, secrets, subprocess, sys, threading, time
+import urllib.error, urllib.parse, urllib.request
+from datetime import date, datetime, timedelta
+
+DIR = os.path.expanduser("~/.config/sigil/gcal")
+CLIENT = os.path.join(DIR, "client.json")
+TOKEN = os.path.join(DIR, "token.json")
+CACHE = os.path.expanduser("~/.cache/sigil/calendar/gcal-calendars.json")
+SCOPES = "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.calendarlist.readonly"
+API = "https://www.googleapis.com/calendar/v3"
+LOCAL = datetime.now().astimezone().tzinfo
+
+
+def die(msg, code=1):
+    print(msg, file=sys.stderr)
+    sys.exit(code)
+
+
+def save_private(path, obj):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    fd = os.open(path + ".tmp", os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        json.dump(obj, f)
+    os.replace(path + ".tmp", path)
+
+
+def client():
+    with open(CLIENT) as f:
+        j = json.load(f)
+    return j.get("installed") or j.get("web") or j
+
+
+def post_form(url, data):
+    req = urllib.request.Request(url, data=urllib.parse.urlencode(data).encode(), method="POST")
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.load(r)
+
+
+def access_token():
+    try:
+        with open(TOKEN) as f:
+            tok = json.load(f)
+    except OSError:
+        die("not-connected", 3)
+    if tok.get("expires_at", 0) > time.time() + 60:
+        return tok["access_token"]
+    c = client()
+    try:
+        new = post_form("https://oauth2.googleapis.com/token", {
+            "client_id": c["client_id"], "client_secret": c.get("client_secret", ""),
+            "refresh_token": tok["refresh_token"], "grant_type": "refresh_token"})
+    except urllib.error.HTTPError as e:
+        die("error: sign-in expired, run sigil-gcal auth again (" + e.read().decode()[:120] + ")", 4)
+    tok["access_token"] = new["access_token"]
+    tok["expires_at"] = time.time() + new.get("expires_in", 3600)
+    save_private(TOKEN, tok)
+    return tok["access_token"]
+
+
+def api(method, path, params=None, body=None):
+    url = API + path + ("?" + urllib.parse.urlencode(params) if params else "")
+    req = urllib.request.Request(url, method=method,
+                                 data=json.dumps(body).encode() if body is not None else None,
+                                 headers={"Authorization": "Bearer " + access_token(),
+                                          "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return json.load(r)
+    except urllib.error.HTTPError as e:
+        die("error: " + e.read().decode()[:300], 5)
+    except urllib.error.URLError as e:
+        die("error: offline (" + str(e.reason) + ")", 6)
+
+
+# ── auth ─────────────────────────────────────────────────────────────
+def auth(path):
+    with open(os.path.expanduser(path)) as f:
+        raw = json.load(f)
+    save_private(CLIENT, raw)
+    c = client()
+    verifier = secrets.token_urlsafe(64)
+    challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
+    state = secrets.token_urlsafe(16)
+    got = {}
+
+    class H(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            if q.get("state", [""])[0] == state:
+                got.update({k: v[0] for k, v in q.items()})
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.end_headers()
+            ok = "code" in got
+            self.wfile.write(("<body style='font:16px sans-serif;background:#111;color:#ddd;padding:3em'>"
+                              + ("sigil-shell is connected to Google Calendar. You can close this tab."
+                                 if ok else "Sign-in failed: " + got.get("error", "no code")) + "</body>").encode())
+
+        def log_message(self, *a):
+            pass
+
+    srv = http.server.HTTPServer(("127.0.0.1", 0), H)
+    redirect = f"http://127.0.0.1:{srv.server_port}"
+    url = "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode({
+        "client_id": c["client_id"], "redirect_uri": redirect, "response_type": "code", "scope": SCOPES,
+        "code_challenge": challenge, "code_challenge_method": "S256", "access_type": "offline",
+        "prompt": "consent", "state": state})
+    print("Opening the browser to sign in. If it does not open, visit:\n" + url)
+    subprocess.Popen(["xdg-open", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    t = threading.Thread(target=lambda: [srv.handle_request() for _ in range(5) if "code" not in got and "error" not in got])
+    t.start()
+    t.join(300)
+    srv.server_close()
+    if "code" not in got:
+        die("sign-in failed or timed out: " + got.get("error", "no answer"))
+    tok = post_form("https://oauth2.googleapis.com/token", {
+        "client_id": c["client_id"], "client_secret": c.get("client_secret", ""), "code": got["code"],
+        "code_verifier": verifier, "grant_type": "authorization_code", "redirect_uri": redirect})
+    if "refresh_token" not in tok:
+        die("Google returned no refresh token; remove the app's access at myaccount.google.com/permissions and retry")
+    tok["expires_at"] = time.time() + tok.get("expires_in", 3600)
+    save_private(TOKEN, tok)
+    print("connected:", ", ".join(c["name"] for c in calendars()))
+
+
+# ── calendars / events ───────────────────────────────────────────────
+def calendars():
+    out = []
+    for c in api("GET", "/users/me/calendarList", {"maxResults": 250}).get("items", []):
+        out.append({"id": c["id"], "name": c.get("summaryOverride") or c.get("summary", c["id"]),
+                    "color": c.get("backgroundColor", "#888888"), "primary": bool(c.get("primary")),
+                    "selected": bool(c.get("selected")), "writable": c.get("accessRole") in ("owner", "writer")})
+    out.sort(key=lambda c: (not c["primary"], not c["writable"], c["name"].lower()))
+    os.makedirs(os.path.dirname(CACHE), exist_ok=True)
+    with open(CACHE, "w") as f:
+        json.dump(out, f)
+    return out
+
+
+def local_iso(s):
+    if "T" not in s:
+        return datetime.fromisoformat(s).isoformat(), True
+    d = datetime.fromisoformat(s.replace("Z", "+00:00"))
+    return d.astimezone(LOCAL).replace(tzinfo=None).isoformat(), False
+
+
+def events(lo, hi):
+    out = []
+    t0 = datetime.fromisoformat(lo).replace(tzinfo=LOCAL).isoformat()
+    t1 = datetime.fromisoformat(hi).replace(tzinfo=LOCAL).isoformat()
+    for c in calendars():
+        if not c["selected"]:
+            continue
+        page = None
+        while True:
+            p = {"timeMin": t0, "timeMax": t1, "singleEvents": "true", "orderBy": "startTime", "maxResults": 2500}
+            if page:
+                p["pageToken"] = page
+            r = api("GET", "/calendars/" + urllib.parse.quote(c["id"], safe="") + "/events", p)
+            for e in r.get("items", []):
+                if e.get("status") == "cancelled":
+                    continue
+                s = e["start"].get("dateTime") or e["start"].get("date")
+                en = e["end"].get("dateTime") or e["end"].get("date")
+                s, all_day = local_iso(s)
+                en, _ = local_iso(en)
+                out.append({"title": e.get("summary", "(no title)"), "start": s, "end": en, "allDay": all_day,
+                            "location": e.get("location", ""), "cal": c["name"], "calId": c["id"],
+                            "color": c["color"]})
+            page = r.get("nextPageToken")
+            if not page:
+                break
+    out.sort(key=lambda e: (e["start"], not e["allDay"]))
+    return out
+
+
+def add(spec):
+    e = json.loads(spec)
+    cal = e.get("calendar") or "primary"
+    day = date.fromisoformat(e["date"])
+    body = {"summary": e.get("title") or "(no title)"}
+    if e.get("location"):
+        body["location"] = e["location"]
+    if e.get("description"):
+        body["description"] = e["description"]
+    if e.get("allDay"):
+        body["start"] = {"date": day.isoformat()}
+        body["end"] = {"date": (day + timedelta(days=1)).isoformat()}
+    else:
+        def at(hm):
+            h, m = (int(x) for x in hm.split(":"))
+            return datetime(day.year, day.month, day.day, h, m, tzinfo=LOCAL)
+        s = at(e.get("start", "09:00"))
+        en = at(e.get("end") or (s + timedelta(hours=1)).strftime("%H:%M"))
+        if en <= s:
+            en += timedelta(days=1)       # ends after midnight
+        body["start"] = {"dateTime": s.isoformat()}
+        body["end"] = {"dateTime": en.isoformat()}
+    r = api("POST", "/calendars/" + urllib.parse.quote(cal, safe="") + "/events", None, body)
+    print(json.dumps({"id": r.get("id"), "link": r.get("htmlLink")}))
+
+
+def main():
+    a = sys.argv[1:]
+    cmd = a[0] if a else ""
+    if cmd == "status":
+        if not os.path.exists(TOKEN):
+            print("not-connected")
+            return
+        access_token()
+        print("ok")
+    elif cmd == "auth" and len(a) == 2:
+        auth(a[1])
+    elif cmd == "calendars":
+        print(json.dumps(calendars()))
+    elif cmd == "events" and len(a) == 3:
+        print(json.dumps(events(a[1], a[2])))
+    elif cmd == "add" and len(a) == 2:
+        add(a[1])
+    elif cmd == "logout":
+        for p in (TOKEN,):
+            if os.path.exists(p):
+                os.remove(p)
+        print("signed out")
+    else:
+        die(__doc__)
+
+
+if __name__ == "__main__":
+    main()

@@ -54,6 +54,11 @@ Column {
 
     // ── events ───────────────────────────────────────────────────────
     readonly property var urls: String(o("ics") || "").split(/\s+/).filter(u => /^(https?|webcal):\/\//.test(u))
+    // Google Calendar connected through the API (sigil-gcal auth): read + create events
+    FileView { id: gcalToken; path: Theme.home + "/.config/sigil/gcal/token.json"; watchChanges: true; printErrors: false; onFileChanged: reload() }
+    readonly property bool gcal: gcalToken.loaded
+    readonly property bool hasSource: urls.length > 0 || gcal
+    Connections { target: Actions; function onCalendarChanged() { root.refresh(); } }
     property var events: []
     property string error: ""
     // fetched window: two months back to a year ahead; refetched when navigating outside it
@@ -83,9 +88,10 @@ Column {
         onExited: (code) => { if (code !== 0) root.error = "feed error"; }
     }
     // deferred: when this runs from a urls / window change, `command` has not caught up yet
-    function refresh() { Qt.callLater(() => { if (root.urls.length && !fetch.running) fetch.running = true; }); }
+    function refresh() { Qt.callLater(() => { if (root.hasSource && !fetch.running) fetch.running = true; }); }
     onUrlsChanged: refresh()
-    Timer { interval: 15 * 60 * 1000; running: root.urls.length > 0; repeat: true; triggeredOnStart: true; onTriggered: root.refresh() }
+    onGcalChanged: refresh()
+    Timer { interval: 15 * 60 * 1000; running: root.hasSource; repeat: true; triggeredOnStart: true; onTriggered: root.refresh() }
     onShownChanged: {
         if (shown < winFrom || shown >= new Date(winTo.getFullYear(), winTo.getMonth() - 1, 1)) {
             winFrom = new Date(year, month - 2, 1);
@@ -144,6 +150,7 @@ Column {
                 TapHandler { enabled: !Widgets.editing; onTapped: nb.hit() }
             }
             Nav { visible: root.offset !== 0 || root.selected !== root.todayKey; width: 40; text: "today"; font.pixelSize: 10; onHit: { root.offset = 0; root.selected = root.todayKey; } }
+            Nav { text: "+"; font.pixelSize: 15; onHit: Actions.newEvent(root.selected) }
             Nav { text: "‹"; onHit: root.offset-- }
             Nav { text: "›"; onHit: root.offset++ }
         }
@@ -195,7 +202,13 @@ Column {
                     spacing: 2
                     Repeater {
                         model: Math.min(3, cell.count)
-                        delegate: Rectangle { width: 3; height: 3; radius: 1.5; color: cell.modelData.today ? Theme.bg : Theme.a2; opacity: cell.modelData.out ? 0.5 : 1 }
+                        delegate: Rectangle {
+                            required property int index
+                            width: 3; height: 3; radius: 1.5
+                            readonly property var ev: (root.byDay[cell.modelData.k] || [])[index]
+                            color: cell.modelData.today ? Theme.bg : (ev && ev.color) ? ev.color : Theme.a2
+                            opacity: cell.modelData.out ? 0.5 : 1
+                        }
                     }
                 }
                 HoverHandler { id: ch; enabled: !Widgets.editing; cursorShape: Qt.PointingHandCursor }
@@ -212,7 +225,7 @@ Column {
 
     // events
     Column {
-        visible: root.urls.length > 0 && root.maxEvents > 0
+        visible: root.hasSource && root.maxEvents > 0
         width: root.w
         spacing: 2
         Rectangle { width: root.w; height: 1; color: Theme.alpha(Theme.fg, 0.08) }
@@ -231,7 +244,11 @@ Column {
                 required property var modelData
                 width: root.w
                 height: 18
-                Rectangle { width: 2; height: 12; radius: 1; anchors.verticalCenter: parent.verticalCenter; color: ev.modelData.day ? Theme.a1 : Theme.alpha(Theme.a2, 0.6) }
+                Rectangle {
+                    width: 2; height: 12; radius: 1; anchors.verticalCenter: parent.verticalCenter
+                    color: ev.modelData.e.color ? ev.modelData.e.color : ev.modelData.day ? Theme.a1 : Theme.alpha(Theme.a2, 0.6)
+                    opacity: ev.modelData.day ? 1 : 0.7
+                }
                 WLabel {
                     id: whenL
                     x: 8
@@ -253,10 +270,10 @@ Column {
         }
     }
     WLabel {
-        visible: root.urls.length === 0 && root.o("hint") !== false
+        visible: !root.hasSource && root.o("hint") !== false
         width: root.w
         wrapMode: Text.Wrap
-        text: "link Google Calendar: widget options → calendar feed"
+        text: "link Google Calendar: sigil-gcal (read + add events) or a feed URL in the options"
         color: Theme.alpha(Theme.dim, 0.7)
         font.pixelSize: 9
     }
