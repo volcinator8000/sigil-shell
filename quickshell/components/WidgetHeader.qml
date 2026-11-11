@@ -1,11 +1,12 @@
 import QtQuick
 import qs.services
 
-// Widgets go without titles now: the header takes no space (kept so types and
-// scaffolds that place one still load).
+// Widgets go without titles: the header takes no space. Its `detail` (city, week, time
+// span, file name, error…) is shown by WidgetFrame in the widget's bottom-right corner.
 Item {
     id: root
     visible: false
+    readonly property bool isWidgetHeader: true
     property string title: ""
     property string detail: ""
     implicitHeight: 0

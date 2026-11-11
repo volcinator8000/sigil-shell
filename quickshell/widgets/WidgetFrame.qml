@@ -58,9 +58,26 @@ Item {
     property real pinX: 0
     property real pinY: 0
     function pin() { pinX = x; pinY = y; pinned = true; }
+    // Flush: a widget dropped against an edge (within flushPad px of the frame) sits right
+    // on it, its border on the frame's hairline, so it reads as part of the frame. The
+    // corner in the screen's corner follows the frame's inner curve; the other corners
+    // along that edge are square.
+    readonly property real flushPad: 14
+    readonly property bool flushL: (entry.ax || "left") === "left" && placedX <= minX + flushPad
+    readonly property bool flushR: entry.ax === "right" && placedX >= sw - vw - Theme.frame - flushPad
+    readonly property bool flushT: (entry.ay || "top") === "top" && placedY <= minY + flushPad
+    readonly property bool flushB: entry.ay === "bottom" && placedY >= sh - vh - Theme.frame - flushPad
+    function cornerR(h, v) {
+        return h && v ? Theme.frameRadius / Math.max(0.01, scale) : (h || v) ? 0 : Theme.radius;
+    }
+    readonly property real rTL: cornerR(flushL, flushT)
+    readonly property real rTR: cornerR(flushR, flushT)
+    readonly property real rBL: cornerR(flushL, flushB)
+    readonly property real rBR: cornerR(flushR, flushB)
+
     // whole pixels: text and the glass texture stay crisp
-    x: Math.round(pinned ? pinX : placedX)
-    y: Math.round(pinned ? pinY : placedY)
+    x: Math.round(pinned ? pinX : flushL ? Theme.frame : flushR ? sw - vw - Theme.frame : placedX)
+    y: Math.round(pinned ? pinY : flushT ? Theme.barH - 1 : flushB ? sh - vh - Theme.frame : placedY)
 
     // old absolute layout → anchors, measured on the largest screen (where it was made)
     Timer {
@@ -80,7 +97,19 @@ Item {
         : Object.assign({}, entry, liveW >= 0 ? { w: liveW } : {}, liveH >= 0 ? { h: liveH } : {})
     readonly property real setH: liveEntry.h || 0
     width: content.item ? content.item.implicitWidth + 24 : 120
-    height: content.item ? Math.max(content.item.implicitHeight, setH) + 24 : 60
+    height: content.item ? Math.max(content.item.implicitHeight, setH) + 24 + (cornerText ? 12 : 0) : 60
+    // small detail (city, week, span, file, error…) from the type's WidgetHeader
+    property Item header: null
+    readonly property string cornerText: header ? header.detail : ""
+    function findHeader(it) {
+        const kids = it ? it.children : [];
+        for (let i = 0; i < kids.length; i++) {
+            if (kids[i].isWidgetHeader) return kids[i];
+            const h = findHeader(kids[i]);
+            if (h) return h;
+        }
+        return null;
+    }
 
     // frost: tinted glass — the wallpaper behind it, lightly softened (Wallpapers.frost is
     // the whole screen pre-softened; this shows the part under the widget), under a dark
@@ -111,14 +140,14 @@ Item {
     Rectangle {
         id: frostMask
         anchors.fill: parent
-        radius: Theme.radius
+        topLeftRadius: frame.rTL; topRightRadius: frame.rTR; bottomLeftRadius: frame.rBL; bottomRightRadius: frame.rBR
         visible: false
         layer.enabled: frame.frosted
     }
 
     Rectangle {
         anchors.fill: parent
-        radius: Theme.radius
+        topLeftRadius: frame.rTL; topRightRadius: frame.rTR; bottomLeftRadius: frame.rBL; bottomRightRadius: frame.rBR
         color: frame.frosted ? Theme.alpha(Theme.bg, 0.66)
              : frame.entry.style === "card" ? Theme.s1
              : frame.entry.style === "glass" ? Theme.alpha(Theme.s1, 0.55) : "transparent"
@@ -135,7 +164,7 @@ Item {
     Rectangle {
         visible: frame.frosted
         anchors.fill: parent
-        radius: Theme.radius
+        topLeftRadius: frame.rTL; topRightRadius: frame.rTR; bottomLeftRadius: frame.rBL; bottomRightRadius: frame.rBR
         gradient: Gradient {
             orientation: Gradient.Vertical
             GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.09) }
@@ -144,7 +173,7 @@ Item {
         }
     }
     Rectangle {
-        visible: frame.frosted
+        visible: frame.frosted && !frame.flushT
         x: Theme.radius; width: parent.width - 2 * Theme.radius
         y: 1; height: 1
         gradient: Gradient {
@@ -174,7 +203,7 @@ Item {
         y: 12
         source: Qt.resolvedUrl("types/" + frame.entry.type + ".qml")
         // every type gets its entry (opts live in entry.opts; read them with Widgets.opt(entry, key))
-        onLoaded: item.entry = Qt.binding(() => frame.liveEntry)
+        onLoaded: { item.entry = Qt.binding(() => frame.liveEntry); frame.header = frame.findHeader(item); }
         // Text on bare widgets gets a soft shadow so it stays readable on any wallpaper.
         // (not on glass: the layer is a texture, and scaled widgets would soften)
         layer.enabled: frame.entry.style === "bare" && Theme.rich
@@ -186,6 +215,18 @@ Item {
             shadowOpacity: 0.8
             shadowColor: "black"
         }
+    }
+
+    WLabel {
+        visible: frame.cornerText !== ""
+        anchors { right: parent.right; bottom: parent.bottom; rightMargin: 12; bottomMargin: 7 }
+        width: Math.min(implicitWidth, parent.width - 24)
+        elide: Text.ElideLeft
+        horizontalAlignment: Text.AlignRight
+        text: frame.cornerText.toUpperCase()
+        color: Theme.alpha(Theme.a2, 0.9)
+        font.pixelSize: 10
+        font.letterSpacing: 1.2
     }
 
     // ── edit mode ────────────────────────────────────────────────────
