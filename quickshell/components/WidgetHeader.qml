@@ -1,11 +1,14 @@
 import QtQuick
 import qs.services
 
+// Widgets go without titles now: the header takes no space (kept so types and
+// scaffolds that place one still load).
 Item {
     id: root
+    visible: false
     property string title: ""
     property string detail: ""
-    implicitHeight: 14
+    implicitHeight: 0
     implicitWidth: 120
 
     WLabel {

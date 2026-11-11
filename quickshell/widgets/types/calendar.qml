@@ -134,7 +134,7 @@ Column {
             anchors.verticalCenter: parent.verticalCenter
             text: Qt.formatDate(root.shown, "MMMM yyyy")
             font.bold: true
-            font.pixelSize: 13
+            font.pixelSize: 14
         }
         Row {
             anchors { right: parent.right; verticalCenter: parent.verticalCenter }
@@ -145,11 +145,11 @@ Column {
                 width: 20; height: 20
                 horizontalAlignment: Text.AlignHCenter
                 color: nh.hovered ? Theme.a1 : Theme.widgetDim
-                font.pixelSize: 13
+                font.pixelSize: 14
                 HoverHandler { id: nh; cursorShape: Qt.PointingHandCursor }
                 TapHandler { enabled: !Widgets.editing; onTapped: nb.hit() }
             }
-            Nav { visible: root.offset !== 0 || root.selected !== root.todayKey; width: 40; text: "today"; font.pixelSize: 10; onHit: { root.offset = 0; root.selected = root.todayKey; } }
+            Nav { visible: root.offset !== 0 || root.selected !== root.todayKey; width: 40; text: "today"; font.pixelSize: 12; onHit: { root.offset = 0; root.selected = root.todayKey; } }
             Nav { text: "+"; font.pixelSize: 15; onHit: Actions.newEvent(root.selected) }
             Nav { text: "‹"; onHit: root.offset-- }
             Nav { text: "›"; onHit: root.offset++ }
@@ -170,7 +170,7 @@ Column {
                 horizontalAlignment: Text.AlignHCenter
                 text: modelData
                 color: Theme.widgetDim
-                font.pixelSize: 10
+                font.pixelSize: 12
             }
         }
         Repeater {
@@ -190,7 +190,7 @@ Column {
                     anchors.horizontalCenter: parent.horizontalCenter
                     y: 2
                     text: cell.modelData.d
-                    font.pixelSize: 11
+                    font.pixelSize: 12
                     font.bold: cell.modelData.today === true
                     color: cell.modelData.today ? Theme.bg
                          : cell.modelData.out ? Theme.alpha(Theme.widgetDim, 0.45)
@@ -234,7 +234,7 @@ Column {
             visible: (root.byDay[root.selected] || []).length === 0
             text: (root.selected === root.todayKey ? "nothing today" : "nothing on " + Qt.formatDate(new Date(root.selected + "T12:00:00"), "ddd d MMM")) + (root.listed.length ? " · next:" : "")
             color: Theme.widgetDim
-            font.pixelSize: 10
+            font.pixelSize: 12
             height: 18
         }
         Repeater {
@@ -256,7 +256,7 @@ Column {
                     width: ev.modelData.day ? 44 : 78
                     text: root.when(ev.modelData.e, ev.modelData.day)
                     color: ev.modelData.day ? Theme.a1 : Theme.widgetDim
-                    font.pixelSize: 10
+                    font.pixelSize: 12
                 }
                 WLabel {
                     x: whenL.x + whenL.width
@@ -264,7 +264,7 @@ Column {
                     width: root.w - x
                     elide: Text.ElideRight
                     text: ev.modelData.e.title + (root.w >= 300 && ev.modelData.e.location ? "  ·  " + ev.modelData.e.location : "")
-                    font.pixelSize: 11
+                    font.pixelSize: 12
                 }
             }
         }
@@ -275,6 +275,6 @@ Column {
         wrapMode: Text.Wrap
         text: "link Google Calendar: sigil-gcal (read + add events) or a feed URL in the options"
         color: Theme.alpha(Theme.widgetDim, 0.7)
-        font.pixelSize: 9
+        font.pixelSize: 11
     }
 }

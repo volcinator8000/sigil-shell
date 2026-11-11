@@ -39,9 +39,9 @@ Column {
         property real hi: 100
         property color tint: Theme.a1
         spacing: 8
-        WLabel { width: 34; text: m.name; color: Theme.widgetDim; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
+        WLabel { width: 34; text: m.name; color: Theme.widgetDim; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }
         Sparkline { width: root.sparkW; height: 20; values: root.tail(m.values); minValue: m.lo; maxValue: m.hi; lineColor: m.tint }
-        WLabel { width: 46; horizontalAlignment: Text.AlignRight; text: m.value; color: m.tint === Theme.warn ? Theme.warn : Theme.fg; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
+        WLabel { width: 46; horizontalAlignment: Text.AlignRight; text: m.value; color: m.tint === Theme.warn ? Theme.warn : Theme.fg; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }
     }
 
     Metric { visible: root.o("cpu") !== false; name: "cpu"; values: Sys.cpuHist; value: Math.round(Sys.cpu) + "%" }
@@ -53,7 +53,7 @@ Column {
     Row {
         visible: root.o("disk") !== false
         spacing: 8
-        WLabel { width: 34; text: "disk"; color: Theme.widgetDim; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
+        WLabel { width: 34; text: "disk"; color: Theme.widgetDim; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }
         Item {
             width: root.sparkW; height: 20
             Rectangle {
@@ -66,6 +66,6 @@ Column {
                 }
             }
         }
-        WLabel { width: 46; horizontalAlignment: Text.AlignRight; text: Math.round(Sys.diskPct) + "%"; color: Sys.diskPct >= 90 ? Theme.crit : Sys.diskPct >= 80 ? Theme.warn : Theme.fg; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
+        WLabel { width: 46; horizontalAlignment: Text.AlignRight; text: Math.round(Sys.diskPct) + "%"; color: Sys.diskPct >= 90 ? Theme.crit : Sys.diskPct >= 80 ? Theme.warn : Theme.fg; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }
     }
 }

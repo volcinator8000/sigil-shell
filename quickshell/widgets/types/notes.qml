@@ -55,7 +55,7 @@ Column {
                     text: modelData.replace(/^\s*[-*] \[[ x]\]\s*/i, "").replace(/^\s*[-*]\s*/, "· ").replace(/^#+\s*/, "")
                     color: done ? Theme.widgetDim : Theme.fg
                     font.strikeout: done
-                    font.pixelSize: 11
+                    font.pixelSize: 12
                     // only whole lines: one that would be cut at the bottom is hidden
                     opacity: y + height <= root.boxH + 0.5 ? 1 : 0
                 }
