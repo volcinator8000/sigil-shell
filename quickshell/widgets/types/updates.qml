@@ -33,7 +33,7 @@ Column {
         Column {
             anchors.verticalCenter: parent.verticalCenter
             WLabel { text: Updates.upgrading ? "upgrading" : Updates.count ? "pending" : Updates.state === "unknown" ? "not checked" : "up to date"; font.pixelSize: 11 }
-            WLabel { text: "repo " + Updates.repo + "  ·  aur " + Updates.aur; color: Theme.dim; font.pixelSize: 10 }
+            WLabel { text: "repo " + Updates.repo + "  ·  aur " + Updates.aur; color: Theme.widgetDim; font.pixelSize: 10 }
         }
     }
 
@@ -43,13 +43,13 @@ Column {
             required property var modelData
             width: root.w
             WLabel { width: root.w * 0.55; elide: Text.ElideRight; text: parent.modelData.name; font.pixelSize: 10 }
-            WLabel { width: root.w * 0.45; elide: Text.ElideRight; horizontalAlignment: Text.AlignRight; text: parent.modelData.to; color: Theme.dim; font.pixelSize: 10 }
+            WLabel { width: root.w * 0.45; elide: Text.ElideRight; horizontalAlignment: Text.AlignRight; text: parent.modelData.to; color: Theme.widgetDim; font.pixelSize: 10 }
         }
     }
     WLabel {
         visible: Updates.packages.length > root.rows && root.rows > 0
         text: "+ " + (Updates.packages.length - root.rows) + " more"
-        color: Theme.dim
+        color: Theme.widgetDim
         font.pixelSize: 10
     }
 

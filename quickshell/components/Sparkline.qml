@@ -29,7 +29,7 @@ Item {
         visible: root.pts.length > 1
         preferredRendererType: Shape.CurveRenderer
         ShapePath {
-            fillColor: Theme.alpha(root.lineColor, 0.14)
+            fillColor: Theme.alpha(root.lineColor, 0.22)
             strokeColor: "transparent"
             PathPolyline {
                 path: root.pts.length > 1 ? [Qt.point(0, root.height)].concat(root.pts, [Qt.point(root.pts[root.pts.length - 1].x, root.height)]) : []
@@ -38,7 +38,7 @@ Item {
         ShapePath {
             fillColor: "transparent"
             strokeColor: root.lineColor
-            strokeWidth: 1.4
+            strokeWidth: 2
             joinStyle: ShapePath.RoundJoin
             capStyle: ShapePath.RoundCap
             PathPolyline { path: root.pts }

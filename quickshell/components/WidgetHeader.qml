@@ -11,7 +11,7 @@ Item {
     WLabel {
         anchors.left: parent.left
         text: root.title.toUpperCase()
-        color: Theme.dim
+        color: Theme.widgetDim
         font.pixelSize: 10
         font.letterSpacing: 1.4
     }

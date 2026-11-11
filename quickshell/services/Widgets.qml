@@ -39,10 +39,15 @@ Singleton {
     onEditingChanged: if (!editing && !pageOpen) selected = -1
     property bool ignoreNextChange: false
 
-    // Can anyone see the widgets right now? Raised (edit / peek), or no windows on the
-    // focused workspace. Widgets with live data only poll while this is true.
+    // Can anyone see the widgets right now? Raised (edit / peek), or no windows on some
+    // monitor's workspace. Widgets with live data only poll while this is true.
     readonly property var ws: Hyprland.focusedWorkspace
-    readonly property bool desktopVisible: editing || peek || !ws || !ws.toplevels || ws.toplevels.values.length === 0
+    // Any monitor counts: an empty workspace on the laptop shows the widgets even while
+    // the focus is on a busy external screen.
+    readonly property bool desktopVisible: editing || peek || Hyprland.monitors.values.some(m => {
+        const w = m.activeWorkspace;
+        return !w || !w.toplevels || w.toplevels.values.length === 0;
+    })
 
     // ── registry ─────────────────────────────────────────────────────
     FileView {

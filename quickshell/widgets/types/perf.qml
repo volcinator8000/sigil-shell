@@ -39,7 +39,7 @@ Column {
         property real hi: 100
         property color tint: Theme.a1
         spacing: 8
-        WLabel { width: 34; text: m.name; color: Theme.dim; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
+        WLabel { width: 34; text: m.name; color: Theme.widgetDim; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
         Sparkline { width: root.sparkW; height: 20; values: root.tail(m.values); minValue: m.lo; maxValue: m.hi; lineColor: m.tint }
         WLabel { width: 46; horizontalAlignment: Text.AlignRight; text: m.value; color: m.tint === Theme.warn ? Theme.warn : Theme.fg; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
     }
@@ -53,7 +53,7 @@ Column {
     Row {
         visible: root.o("disk") !== false
         spacing: 8
-        WLabel { width: 34; text: "disk"; color: Theme.dim; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
+        WLabel { width: 34; text: "disk"; color: Theme.widgetDim; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
         Item {
             width: root.sparkW; height: 20
             Rectangle {

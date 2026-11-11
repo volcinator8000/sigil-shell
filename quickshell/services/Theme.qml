@@ -71,6 +71,9 @@ Singleton {
     property color line: "#1b1b24"
     property color fg: "#dcdce3"
     property color dim: "#6b6b78"
+    // secondary text on desktop widgets: brighter than dim, so small labels stay readable
+    // over glass and bare widgets on a busy wallpaper
+    readonly property color widgetDim: Qt.tint(dim, alpha(fg, 0.5))
     property color a1: "#3ae0ff"
     property color a2: "#a64dff"
     property color ok: "#39ff14"

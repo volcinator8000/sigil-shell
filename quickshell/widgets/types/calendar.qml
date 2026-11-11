@@ -144,7 +144,7 @@ Column {
                 signal hit()
                 width: 20; height: 20
                 horizontalAlignment: Text.AlignHCenter
-                color: nh.hovered ? Theme.a1 : Theme.dim
+                color: nh.hovered ? Theme.a1 : Theme.widgetDim
                 font.pixelSize: 13
                 HoverHandler { id: nh; cursorShape: Qt.PointingHandCursor }
                 TapHandler { enabled: !Widgets.editing; onTapped: nb.hit() }
@@ -169,7 +169,7 @@ Column {
                 width: (root.w - 12) / 7
                 horizontalAlignment: Text.AlignHCenter
                 text: modelData
-                color: Theme.dim
+                color: Theme.widgetDim
                 font.pixelSize: 10
             }
         }
@@ -193,7 +193,7 @@ Column {
                     font.pixelSize: 11
                     font.bold: cell.modelData.today === true
                     color: cell.modelData.today ? Theme.bg
-                         : cell.modelData.out ? Theme.alpha(Theme.dim, 0.45)
+                         : cell.modelData.out ? Theme.alpha(Theme.widgetDim, 0.45)
                          : cell.modelData.we ? Theme.a2 : Theme.fg
                 }
                 // one dot per event, up to three
@@ -233,7 +233,7 @@ Column {
         WLabel {
             visible: (root.byDay[root.selected] || []).length === 0
             text: (root.selected === root.todayKey ? "nothing today" : "nothing on " + Qt.formatDate(new Date(root.selected + "T12:00:00"), "ddd d MMM")) + (root.listed.length ? " · next:" : "")
-            color: Theme.dim
+            color: Theme.widgetDim
             font.pixelSize: 10
             height: 18
         }
@@ -255,7 +255,7 @@ Column {
                     anchors.verticalCenter: parent.verticalCenter
                     width: ev.modelData.day ? 44 : 78
                     text: root.when(ev.modelData.e, ev.modelData.day)
-                    color: ev.modelData.day ? Theme.a1 : Theme.dim
+                    color: ev.modelData.day ? Theme.a1 : Theme.widgetDim
                     font.pixelSize: 10
                 }
                 WLabel {
@@ -274,7 +274,7 @@ Column {
         width: root.w
         wrapMode: Text.Wrap
         text: "link Google Calendar: sigil-gcal (read + add events) or a feed URL in the options"
-        color: Theme.alpha(Theme.dim, 0.7)
+        color: Theme.alpha(Theme.widgetDim, 0.7)
         font.pixelSize: 9
     }
 }

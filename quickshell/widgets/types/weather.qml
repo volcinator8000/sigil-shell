@@ -38,7 +38,7 @@ Column {
             }
             WLabel {
                 text: Weather.ready ? Weather.description + (root.o("showRange") ? " · H " + Math.round(Weather.high) + "° L " + Math.round(Weather.low) + "°" : "") : "loading…"
-                color: Theme.dim
+                color: Theme.widgetDim
                 font.pixelSize: 11
             }
         }
@@ -51,7 +51,7 @@ Column {
             delegate: Column {
                 required property var modelData
                 width: root.w / 4
-                WLabel { anchors.horizontalCenter: parent.horizontalCenter; text: parent.modelData.label; color: Theme.dim; font.pixelSize: 10 }
+                WLabel { anchors.horizontalCenter: parent.horizontalCenter; text: parent.modelData.label; color: Theme.widgetDim; font.pixelSize: 10 }
                 WLabel { anchors.horizontalCenter: parent.horizontalCenter; text: parent.modelData.temp + "°"; font.pixelSize: 11 }
             }
         }
@@ -68,10 +68,10 @@ Column {
                 required property var modelData
                 width: root.w / 7
                 spacing: 3
-                WLabel { anchors.horizontalCenter: parent.horizontalCenter; text: parent.modelData.label; color: Theme.dim; font.pixelSize: 10 }
+                WLabel { anchors.horizontalCenter: parent.horizontalCenter; text: parent.modelData.label; color: Theme.widgetDim; font.pixelSize: 10 }
                 WLabel { anchors.horizontalCenter: parent.horizontalCenter; text: parent.modelData.glyph; color: Theme.a2; font.pixelSize: 18 }
                 WLabel { anchors.horizontalCenter: parent.horizontalCenter; text: parent.modelData.high + "°"; font.pixelSize: 11; font.bold: true }
-                WLabel { anchors.horizontalCenter: parent.horizontalCenter; text: parent.modelData.low + "°"; color: Theme.dim; font.pixelSize: 10 }
+                WLabel { anchors.horizontalCenter: parent.horizontalCenter; text: parent.modelData.low + "°"; color: Theme.widgetDim; font.pixelSize: 10 }
             }
         }
     }
@@ -86,9 +86,9 @@ Column {
                 required property var modelData
                 width: root.w
                 height: 18
-                WLabel { anchors.verticalCenter: parent.verticalCenter; width: 46; text: parent.modelData.label; color: Theme.dim; font.pixelSize: 11 }
+                WLabel { anchors.verticalCenter: parent.verticalCenter; width: 46; text: parent.modelData.label; color: Theme.widgetDim; font.pixelSize: 11 }
                 WLabel { anchors.verticalCenter: parent.verticalCenter; x: 46; text: parent.modelData.glyph; color: Theme.a2; font.pixelSize: 14 }
-                WLabel { anchors.verticalCenter: parent.verticalCenter; x: 70; width: root.w - 70 - 70; elide: Text.ElideRight; text: parent.modelData.text; color: Theme.dim; font.pixelSize: 10 }
+                WLabel { anchors.verticalCenter: parent.verticalCenter; x: 70; width: root.w - 70 - 70; elide: Text.ElideRight; text: parent.modelData.text; color: Theme.widgetDim; font.pixelSize: 10 }
                 WLabel {
                     anchors { right: parent.right; verticalCenter: parent.verticalCenter }
                     text: parent.modelData.high + "° / " + parent.modelData.low + "°"

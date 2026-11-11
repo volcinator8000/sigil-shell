@@ -180,8 +180,8 @@ Item {
         layer.textureSize: Qt.size(Math.ceil(width * frame.scale), Math.ceil(height * frame.scale))
         layer.effect: MultiEffect {
             shadowEnabled: true
-            shadowBlur: 0.5
-            shadowOpacity: frame.frosted ? 0.55 : 0.8
+            shadowBlur: frame.frosted ? 0.35 : 0.5
+            shadowOpacity: frame.frosted ? 0.9 : 0.8
             shadowColor: "black"
         }
     }

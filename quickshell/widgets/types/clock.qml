@@ -15,5 +15,5 @@ Column {
         font.pixelSize: root.o("size") || 44
         font.bold: true
     }
-    WLabel { visible: root.o("showDate") !== false; text: Qt.formatDate(clock.date, "dddd d MMMM"); color: Theme.dim }
+    WLabel { visible: root.o("showDate") !== false; text: Qt.formatDate(clock.date, "dddd d MMMM"); color: Theme.widgetDim }
 }
