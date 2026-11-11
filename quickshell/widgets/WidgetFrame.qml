@@ -81,9 +81,9 @@ Item {
     width: content.item ? content.item.implicitWidth + 24 : 120
     height: content.item ? Math.max(content.item.implicitHeight, setH) + 24 : 60
 
-    // frost: like an empty kitty window — the wallpaper behind it, blurred (Wallpapers.frost
-    // is the whole screen pre-blurred; this shows the part under the widget), under the
-    // terminal background at kitty's background_opacity
+    // frost: tinted glass — the wallpaper behind it, lightly softened (Wallpapers.frost is
+    // the whole screen pre-softened; this shows the part under the widget), under a dark
+    // tint, with a sheen and a bright rim like a glass edge
     readonly property bool frosted: entry.style === "frost"
     Item {
         id: frostLayer
@@ -118,15 +118,40 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: Theme.radius
-        color: frame.frosted ? Theme.alpha(Theme.bg, 0.88)
+        color: frame.frosted ? Theme.alpha(Theme.bg, 0.62)
              : frame.entry.style === "card" ? Theme.s1
              : frame.entry.style === "glass" ? Theme.alpha(Theme.s1, 0.55) : "transparent"
         // bare: no outline at all outside edit mode
         border.width: frame.entry.style === "bare" && !frame.editing ? 0 : 1
         border.color: frame.editing ? Theme.alpha(Theme.a1, 0.7)
-                    : frame.entry.style === "card" || frame.frosted ? Theme.line
+                    : frame.frosted ? Theme.alpha(Theme.fg, 0.16)
+                    : frame.entry.style === "card" ? Theme.line
                     : frame.entry.style === "glass" ? Theme.alpha(Theme.fg, 0.10) : "transparent"
         Behavior on color { ColorAnimation { duration: Theme.dur(200) } }
+    }
+
+    // glass sheen: light falling from the top left, and a brighter rim along the top edge
+    Rectangle {
+        visible: frame.frosted
+        anchors.fill: parent
+        radius: Theme.radius
+        gradient: Gradient {
+            orientation: Gradient.Vertical
+            GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.09) }
+            GradientStop { position: 0.35; color: Qt.rgba(1, 1, 1, 0.025) }
+            GradientStop { position: 1.0; color: Qt.rgba(1, 1, 1, 0.0) }
+        }
+    }
+    Rectangle {
+        visible: frame.frosted
+        x: Theme.radius; width: parent.width - 2 * Theme.radius
+        y: 1; height: 1
+        gradient: Gradient {
+            orientation: Gradient.Horizontal
+            GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.0) }
+            GradientStop { position: 0.3; color: Qt.rgba(1, 1, 1, 0.22) }
+            GradientStop { position: 1.0; color: Qt.rgba(1, 1, 1, 0.04) }
+        }
     }
 
     // highlighted while selected on the settings page
@@ -150,13 +175,13 @@ Item {
         // every type gets its entry (opts live in entry.opts; read them with Widgets.opt(entry, key))
         onLoaded: item.entry = Qt.binding(() => frame.liveEntry)
         // Text on bare widgets gets a soft shadow so it stays readable on any wallpaper.
-        layer.enabled: frame.entry.style === "bare" && Theme.rich
+        layer.enabled: (frame.entry.style === "bare" || frame.frosted) && Theme.rich
         // render the layer at the scaled size, or it is a small texture stretched (blurry)
         layer.textureSize: Qt.size(Math.ceil(width * frame.scale), Math.ceil(height * frame.scale))
         layer.effect: MultiEffect {
             shadowEnabled: true
             shadowBlur: 0.5
-            shadowOpacity: 0.8
+            shadowOpacity: frame.frosted ? 0.55 : 0.8
             shadowColor: "black"
         }
     }
