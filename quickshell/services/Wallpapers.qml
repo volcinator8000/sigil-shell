@@ -64,7 +64,7 @@ Singleton {
     onCurrentChanged: makeStill(current)
 
     // Softened copy of the still for "frost" widgets (tinted glass: a light blur, just
-    // enough to calm the detail, and a little extra saturation). Made once per wallpaper,
+    // enough to calm the detail, darkened so text on top stays readable, a little more saturation). Made once per wallpaper,
     // ~/.cache/sigil/frost; widgets show the part behind them, so nothing blurs per frame.
     property string frost: ""
     onStillChanged: makeFrost(still)
@@ -75,10 +75,10 @@ Singleton {
     }
     function makeFrost(p) {
         if (!p) { frost = ""; return; }
-        frostProc.out = Theme.home + "/.cache/sigil/frost/" + Qt.md5("v2:" + p) + ".jpg";
+        frostProc.out = Theme.home + "/.cache/sigil/frost/" + Qt.md5("v3:" + p) + ".jpg";
         frostProc.command = ["sh", "-c",
             '[ -s "$2" ] && [ "$2" -nt "$1" ] && exit 0; mkdir -p "$(dirname "$2")"; ' +
-            'magick "$1[0]" -resize 1280x -blur 0x2.2 -modulate 100,125 -quality 90 "$2.tmp.jpg" && mv "$2.tmp.jpg" "$2"',
+            'magick "$1[0]" -resize 1280x -blur 0x3 -modulate 78,120 -quality 90 "$2.tmp.jpg" && mv "$2.tmp.jpg" "$2"',
             "sh", p, frostProc.out];
         frostProc.running = true;
     }

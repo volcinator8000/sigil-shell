@@ -58,8 +58,9 @@ Item {
     property real pinX: 0
     property real pinY: 0
     function pin() { pinX = x; pinY = y; pinned = true; }
-    x: pinned ? pinX : placedX
-    y: pinned ? pinY : placedY
+    // whole pixels: text and the glass texture stay crisp
+    x: Math.round(pinned ? pinX : placedX)
+    y: Math.round(pinned ? pinY : placedY)
 
     // old absolute layout → anchors, measured on the largest screen (where it was made)
     Timer {
@@ -118,7 +119,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: Theme.radius
-        color: frame.frosted ? Theme.alpha(Theme.bg, 0.62)
+        color: frame.frosted ? Theme.alpha(Theme.bg, 0.66)
              : frame.entry.style === "card" ? Theme.s1
              : frame.entry.style === "glass" ? Theme.alpha(Theme.s1, 0.55) : "transparent"
         // bare: no outline at all outside edit mode
@@ -175,13 +176,14 @@ Item {
         // every type gets its entry (opts live in entry.opts; read them with Widgets.opt(entry, key))
         onLoaded: item.entry = Qt.binding(() => frame.liveEntry)
         // Text on bare widgets gets a soft shadow so it stays readable on any wallpaper.
-        layer.enabled: (frame.entry.style === "bare" || frame.frosted) && Theme.rich
+        // (not on glass: the layer is a texture, and scaled widgets would soften)
+        layer.enabled: frame.entry.style === "bare" && Theme.rich
         // render the layer at the scaled size, or it is a small texture stretched (blurry)
         layer.textureSize: Qt.size(Math.ceil(width * frame.scale), Math.ceil(height * frame.scale))
         layer.effect: MultiEffect {
             shadowEnabled: true
-            shadowBlur: frame.frosted ? 0.35 : 0.5
-            shadowOpacity: frame.frosted ? 0.9 : 0.8
+            shadowBlur: 0.5
+            shadowOpacity: 0.8
             shadowColor: "black"
         }
     }
