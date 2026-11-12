@@ -46,8 +46,46 @@ Column {
 
     Metric { visible: root.o("cpu") !== false; name: "cpu"; values: Sys.cpuHist; value: Math.round(Sys.cpu) + "%" }
     Metric { visible: root.o("ram") !== false; name: "ram"; values: Sys.ramHist; hi: Sys.ramTotal; tint: Theme.a2; value: Sys.ramUsed.toFixed(1) + "G" }
-    Metric { visible: root.o("gpu") !== false; name: "gpu"; values: Sys.gpuHist; value: Math.round(Sys.gpu) + "%" }
+    // one row per GPU (laptops with a dGPU get "igpu" and "dgpu"; games on the LG run on the dGPU)
+    Repeater {
+        model: root.o("gpu") !== false ? Sys.gpus : []
+        delegate: Metric {
+            required property var modelData
+            name: modelData.label
+            values: Sys.gpuHists[modelData.label] || []
+            value: Math.round(modelData.busy) + "%"
+        }
+    }
     Metric { visible: root.o("temp") !== false; name: "temp"; values: Sys.tempHist; lo: 30; hi: 100; tint: Sys.temp > 80 ? Theme.warn : Theme.a2; value: Math.round(Sys.temp) + "°" }
+
+    // GPU temperatures, VRAM, NVMe and fans as one line each
+    component Info: Row {
+        id: inf
+        property string name
+        property string value
+        property bool hot: false
+        spacing: 8
+        WLabel { width: 34; text: inf.name; color: Theme.widgetDim; font.pixelSize: 12 }
+        WLabel { width: root.w - 42; elide: Text.ElideRight; text: inf.value; color: inf.hot ? Theme.warn : Theme.fg; font.pixelSize: 12 }
+    }
+    readonly property string gpuTemps: Sys.gpus.filter(g => g.temp > 0).map(g => g.label + " " + Math.round(g.temp) + "°").join("   ")
+    readonly property var dgpu: Sys.gpus.find(g => g.label !== "igpu" && g.vramTotal > 1) || null
+    Info {
+        visible: root.o("details") !== false && (root.gpuTemps !== "" || Sys.nvmeTemp > 0)
+        name: "heat"
+        value: root.gpuTemps + (Sys.nvmeTemp > 0 ? (root.gpuTemps ? "   " : "") + "nvme " + Math.round(Sys.nvmeTemp) + "°" : "")
+        hot: Sys.gpus.some(g => g.temp > 85)
+    }
+    Info {
+        visible: root.o("details") !== false && root.dgpu !== null
+        name: "vram"
+        value: root.dgpu ? root.dgpu.vramUsed.toFixed(1) + " / " + root.dgpu.vramTotal.toFixed(1) + " G" + (Sys.gpus.length > 1 ? "  (" + root.dgpu.label + ")" : "") : ""
+    }
+    Info {
+        visible: root.o("details") !== false && Sys.fans.length > 0
+        name: "fans"
+        value: Sys.fans.every(r => r === 0) ? "off" : Sys.fans.map(r => Math.round(r)).join(" · ") + " rpm"
+    }
 
     // root disk: a bar, not a graph (it changes over days, not seconds)
     Row {

@@ -2,8 +2,18 @@
   {
     "type": "calendar",
     "label": "Calendar",
-    "description": "Month grid with events from Google Calendar (or any iCal feed). Click a day for its events; \u2039 \u203a change month",
+    "description": "Month grid or agenda with events from Google Calendar (or any iCal feed). Click a day for its events; ‹ › change month (agenda: week)",
     "options": [
+      {
+        "key": "view",
+        "label": "View",
+        "kind": "enum",
+        "choices": [
+          "month",
+          "agenda"
+        ],
+        "default": "month"
+      },
       {
         "key": "weekStart",
         "label": "Week starts on",
@@ -22,31 +32,67 @@
       },
       {
         "key": "ics",
-        "label": "Calendar feed (Google: Settings \u2192 your calendar \u2192 Secret address in iCal format; several = space separated)",
+        "label": "Calendar feed (Google: Settings → your calendar → Secret address in iCal format; several = space separated)",
         "kind": "string",
         "default": ""
       },
       {
         "key": "events",
-        "label": "Events listed",
+        "label": "Events listed (at least; a taller widget fits more)",
         "kind": "int",
         "min": 0,
         "max": 12,
         "step": 1,
         "default": 4
+      },
+      {
+        "key": "agendaDays",
+        "label": "Agenda: days ahead",
+        "kind": "int",
+        "min": 1,
+        "max": 31,
+        "step": 1,
+        "default": 7
       }
     ]
   },
   {
     "type": "weather",
     "label": "Weather",
-    "description": "Current conditions from Open-Meteo (location: Widgets page). Drag it wider or taller for the week",
+    "description": "Current conditions, the next hours (sky, temperature, rain chance) and the week from Open-Meteo (location: Widgets page). Drag it wider or taller for the days",
     "options": [
       {
         "key": "showForecast",
         "label": "Show next hours",
         "kind": "bool",
         "default": true
+      },
+      {
+        "key": "hours",
+        "label": "Hours shown",
+        "kind": "int",
+        "min": 2,
+        "max": 12,
+        "step": 1,
+        "default": 6
+      },
+      {
+        "key": "hourStep",
+        "label": "Hours between columns",
+        "kind": "int",
+        "min": 1,
+        "max": 4,
+        "step": 1,
+        "default": 2
+      },
+      {
+        "key": "days",
+        "label": "Days shown (when wide or tall)",
+        "kind": "int",
+        "min": 0,
+        "max": 7,
+        "step": 1,
+        "default": 7
       },
       {
         "key": "showRange",
@@ -59,7 +105,7 @@
   {
     "type": "perf",
     "label": "Performance",
-    "description": "CPU, RAM, GPU and temperature graphs, root disk usage. Wider = longer timeline",
+    "description": "CPU, RAM, every GPU, temperatures, VRAM and fans, root disk usage. Wider = longer timeline",
     "options": [
       {
         "key": "cpu",
@@ -75,13 +121,19 @@
       },
       {
         "key": "gpu",
-        "label": "GPU",
+        "label": "GPU load (each GPU)",
         "kind": "bool",
         "default": true
       },
       {
         "key": "temp",
-        "label": "Temperature",
+        "label": "CPU temperature",
+        "kind": "bool",
+        "default": true
+      },
+      {
+        "key": "details",
+        "label": "GPU temps, VRAM and fans",
         "kind": "bool",
         "default": true
       },
@@ -105,13 +157,19 @@
   {
     "type": "clock",
     "label": "Clock",
-    "description": "Large time and date",
+    "description": "Large time, date line and an optional second time zone",
     "options": [
       {
         "key": "seconds",
         "label": "Show seconds",
         "kind": "bool",
         "default": false
+      },
+      {
+        "key": "smallSeconds",
+        "label": "Seconds set smaller",
+        "kind": "bool",
+        "default": true
       },
       {
         "key": "h12",
@@ -126,6 +184,31 @@
         "default": true
       },
       {
+        "key": "dateFormat",
+        "label": "Date format",
+        "kind": "enum",
+        "choices": [
+          "long",
+          "short",
+          "numeric",
+          "iso",
+          "week"
+        ],
+        "default": "long"
+      },
+      {
+        "key": "zone",
+        "label": "Second time zone (e.g. America/New_York, Asia/Tokyo; empty = none)",
+        "kind": "string",
+        "default": ""
+      },
+      {
+        "key": "zoneLabel",
+        "label": "Second zone label (empty = city name)",
+        "kind": "string",
+        "default": ""
+      },
+      {
         "key": "size",
         "label": "Size",
         "kind": "int",
@@ -133,6 +216,69 @@
         "max": 120,
         "step": 2,
         "default": 44
+      }
+    ]
+  },
+  {
+    "type": "nowplaying",
+    "label": "Now playing",
+    "description": "Album art, title and artist, progress (click to seek) and controls for the active player. Make it tall for big art",
+    "options": [
+      {
+        "key": "art",
+        "label": "Show album art",
+        "kind": "bool",
+        "default": true
+      },
+      {
+        "key": "album",
+        "label": "Show album name",
+        "kind": "bool",
+        "default": true
+      },
+      {
+        "key": "hideIdle",
+        "label": "Hide when nothing is playing",
+        "kind": "bool",
+        "default": false
+      }
+    ]
+  },
+  {
+    "type": "battery",
+    "label": "Battery & power",
+    "description": "Charge, time left or to full, live power draw graph and battery health. Wider = longer timeline",
+    "options": [
+      {
+        "key": "graph",
+        "label": "Power graph",
+        "kind": "bool",
+        "default": true
+      },
+      {
+        "key": "health",
+        "label": "Battery health",
+        "kind": "bool",
+        "default": true
+      }
+    ]
+  },
+  {
+    "type": "network",
+    "label": "Network",
+    "description": "Wi-Fi name and signal (or ethernet), download / upload graphs and local IP. Wider = longer timeline",
+    "options": [
+      {
+        "key": "graphs",
+        "label": "Speed graphs",
+        "kind": "bool",
+        "default": true
+      },
+      {
+        "key": "ip",
+        "label": "Show local IP",
+        "kind": "bool",
+        "default": true
       }
     ]
   },

@@ -15,7 +15,18 @@ Column {
     function o(k) { return Widgets.opt(entry, k); }
     readonly property bool wide: w >= 340
     readonly property bool tall: !wide && (entry.h || 0) >= 200
-    readonly property bool week: (wide || tall) && Weather.days.length > 0
+    readonly property bool week: (wide || tall) && Weather.days.length > 0 && nDays > 0
+    readonly property int nDays: o("days") === undefined ? 7 : o("days")
+    readonly property var shownDays: Weather.days.slice(0, nDays)
+    // hourly strip: n columns, one every `step` hours
+    readonly property int nHours: Math.max(1, Math.min(12, o("hours") || 6))
+    readonly property int hourStep: Math.max(1, o("hourStep") || 2)
+    readonly property var shownHours: {
+        const out = [];
+        for (let i = hourStep - 1; i < Weather.hours.length && out.length < nHours; i += hourStep) out.push(Weather.hours[i]);
+        return out;
+    }
+    function rainText(r) { return r >= 20 ? r + "%" : ""; }
 
     Component.onCompleted: Weather.users++
     Component.onDestruction: Weather.users--
@@ -37,22 +48,33 @@ Column {
                 font.bold: true
             }
             WLabel {
-                text: Weather.ready ? Weather.description + (root.o("showRange") ? " · H " + Math.round(Weather.high) + "° L " + Math.round(Weather.low) + "°" : "") : "loading…"
+                text: Weather.ready ? Weather.description + (root.o("showRange") ? " · H " + Math.round(Weather.high) + "° L " + Math.round(Weather.low) + "°" : "")
+                                      + (Weather.rainToday >= 20 ? " · " + Weather.rainToday + "% rain" : "") : "loading…"
                 color: Theme.widgetDim
                 font.pixelSize: 12
             }
         }
     }
 
+    // next hours: time, sky, temperature, chance of rain when it matters
     Row {
-        visible: Weather.hours.length > 0 && root.o("showForecast") !== false
+        visible: root.shownHours.length > 0 && root.o("showForecast") !== false
         Repeater {
-            model: Weather.hours
+            model: root.shownHours
             delegate: Column {
                 required property var modelData
-                width: root.w / 4
-                WLabel { anchors.horizontalCenter: parent.horizontalCenter; text: parent.modelData.label; color: Theme.widgetDim; font.pixelSize: 12 }
-                WLabel { anchors.horizontalCenter: parent.horizontalCenter; text: parent.modelData.temp + "°"; font.pixelSize: 12 }
+                width: root.w / root.nHours
+                spacing: 2
+                WLabel { anchors.horizontalCenter: parent.horizontalCenter; text: parent.modelData.label; color: Theme.widgetDim; font.pixelSize: 11 }
+                WLabel { anchors.horizontalCenter: parent.horizontalCenter; text: parent.modelData.glyph; color: Theme.a2; font.pixelSize: 16 }
+                WLabel { anchors.horizontalCenter: parent.horizontalCenter; text: parent.modelData.temp + "°"; font.pixelSize: 12; font.bold: true }
+                WLabel {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: root.rainText(parent.modelData.rain) || " "
+                    color: Theme.a1
+                    font.pixelSize: 10
+                    visible: root.shownHours.some(h => h.rain >= 20)
+                }
             }
         }
     }
@@ -63,15 +85,16 @@ Column {
     Row {
         visible: root.week && root.wide
         Repeater {
-            model: root.wide ? Weather.days : []
+            model: root.wide ? root.shownDays : []
             delegate: Column {
                 required property var modelData
-                width: root.w / 7
+                width: root.w / Math.max(1, root.shownDays.length)
                 spacing: 3
                 WLabel { anchors.horizontalCenter: parent.horizontalCenter; text: parent.modelData.label; color: Theme.widgetDim; font.pixelSize: 12 }
                 WLabel { anchors.horizontalCenter: parent.horizontalCenter; text: parent.modelData.glyph; color: Theme.a2; font.pixelSize: 18 }
                 WLabel { anchors.horizontalCenter: parent.horizontalCenter; text: parent.modelData.high + "°"; font.pixelSize: 12; font.bold: true }
                 WLabel { anchors.horizontalCenter: parent.horizontalCenter; text: parent.modelData.low + "°"; color: Theme.widgetDim; font.pixelSize: 12 }
+                WLabel { anchors.horizontalCenter: parent.horizontalCenter; text: root.rainText(parent.modelData.rain) || " "; color: Theme.a1; font.pixelSize: 10 }
             }
         }
     }
@@ -81,14 +104,15 @@ Column {
         visible: root.week && root.tall
         spacing: 4
         Repeater {
-            model: root.tall ? Weather.days : []
+            model: root.tall ? root.shownDays : []
             delegate: Item {
                 required property var modelData
                 width: root.w
                 height: 18
                 WLabel { anchors.verticalCenter: parent.verticalCenter; width: 46; text: parent.modelData.label; color: Theme.widgetDim; font.pixelSize: 12 }
                 WLabel { anchors.verticalCenter: parent.verticalCenter; x: 46; text: parent.modelData.glyph; color: Theme.a2; font.pixelSize: 14 }
-                WLabel { anchors.verticalCenter: parent.verticalCenter; x: 70; width: root.w - 70 - 70; elide: Text.ElideRight; text: parent.modelData.text; color: Theme.widgetDim; font.pixelSize: 12 }
+                WLabel { anchors.verticalCenter: parent.verticalCenter; x: 70; width: root.w - 70 - 110; elide: Text.ElideRight; text: parent.modelData.text; color: Theme.widgetDim; font.pixelSize: 12 }
+                WLabel { anchors.verticalCenter: parent.verticalCenter; x: root.w - 110; width: 36; horizontalAlignment: Text.AlignRight; text: root.rainText(parent.modelData.rain); color: Theme.a1; font.pixelSize: 11 }
                 WLabel {
                     anchors { right: parent.right; verticalCenter: parent.verticalCenter }
                     text: parent.modelData.high + "° / " + parent.modelData.low + "°"

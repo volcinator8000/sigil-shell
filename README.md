@@ -71,7 +71,9 @@ not engaged within 2 s, and `hypr/sigil.lua` enables `misc:allow_session_lock_re
 
 Other helpers in `bin/`: `sigil-updates` / `sigil-update-now` (pending packages, upgrade
 window), `sigil-keepawake`, `sigil-nightlight` (hyprsunset schedule + override),
-`sigil-battery` (one-line status), `sigil-tablet-detect`, `sigil-apply` (palette templates).
+`sigil-battery` (one-line status), `sigil-tablet-detect`, `sigil-apply` (palette templates),
+`sigil-monitors` (re-applies monitor rules after the Display page writes
+`~/.config/hypr/monitors.lua`; `sigil-monitors reset` drops every override).
 
 ## Staying up
 

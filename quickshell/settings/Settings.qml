@@ -39,7 +39,7 @@ Scope {
         { name: "wifi",          group: "Connections",           title: "Wi-Fi",             glyph: "\u{F05A9}", desc: "Networks, Tailscale and KDE Connect", keys: "network internet wireless tailscale vpn phone kde connect" },
         { name: "bluetooth",     group: "Connections",           title: "Bluetooth",         glyph: "\u{F00AF}", desc: "Adapter and devices", keys: "headphones pair devices" },
 
-        { name: "display",       group: "Devices",               title: "Display",           glyph: "\u{F0379}", desc: "Brightness and night light", keys: "screen backlight brightness night light warm hyprsunset" },
+        { name: "display",       group: "Devices",               title: "Display",           glyph: "\u{F0379}", desc: "Monitors, brightness and night light", keys: "screen monitor monitors resolution refresh rate hz scale rotation arrange layout position vrr freesync adaptive sync 10-bit colour color bitdepth mirror backlight brightness night light warm hyprsunset" },
         { name: "power",         group: "Devices",               title: "Power",             glyph: "\u{F0079}", desc: "Power profile, battery saving, ultra power saver, idle timers", keys: "battery profile performance eco ultra idle sleep lock suspend dim" },
         { name: "input",         group: "Devices",               title: "Keyboard & mouse",  glyph: "\u{F030C}", desc: "Key repeat, mouse sensitivity and touchpad", keys: "input keyboard mouse touchpad trackpad tap scroll repeat" },
         { name: "tablet",        group: "Devices",               title: "Tablet",            glyph: "\u{F03FA}", desc: "Drawing tablet mapping and buttons", keys: "pen wacom stylus drawing" },

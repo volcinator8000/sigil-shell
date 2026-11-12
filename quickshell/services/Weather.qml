@@ -19,8 +19,11 @@ Singleton {
     property bool isDay: true
     property real high: 0
     property real low: 0
-    property var hours: []     // [{ label: "15h", temp: 9 }, ...]
-    property var days: []      // [{ label: "Tue", high: 12, low: 4, code: 61, glyph: "…" }, ...] (7, today first)
+    // the next 24 hours, every hour: [{ label: "15h", temp: 9, code: 61, glyph: "…", rain: 40 }, ...]
+    property var hours: []
+    // [{ label: "Tue", high: 12, low: 4, code: 61, glyph: "…", text, rain: 70 }, ...] (7, today first)
+    property var days: []
+    property int rainToday: 0  // % chance, today
 
     readonly property string city: Theme.weather.city || ""
     readonly property string description: describe(code)
@@ -53,7 +56,8 @@ Singleton {
         id: fetch
         command: ["curl", "-sf", "--max-time", "15",
             "https://api.open-meteo.com/v1/forecast?latitude=" + Theme.weather.lat + "&longitude=" + Theme.weather.lon +
-            "&current=temperature_2m,weather_code,is_day&hourly=temperature_2m&daily=temperature_2m_max,temperature_2m_min,weather_code" +
+            "&current=temperature_2m,weather_code,is_day&hourly=temperature_2m,weather_code,precipitation_probability,is_day" +
+            "&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max" +
             "&timezone=auto&forecast_days=7"]
         stdout: StdioCollector {
             onStreamFinished: root.parse(text)
@@ -73,9 +77,14 @@ Singleton {
             const now = j.current.time.slice(0, 13);
             const start = j.hourly.time.findIndex(x => x.slice(0, 13) === now);
             const out = [];
-            for (let k = 3; k <= 12 && start >= 0; k += 3) {
+            const H = j.hourly;
+            for (let k = 1; k <= 24 && start >= 0; k++) {
                 const i = start + k;
-                if (i < j.hourly.time.length) out.push({ label: j.hourly.time[i].slice(11, 13) + "h", temp: Math.round(j.hourly.temperature_2m[i]) });
+                if (i >= H.time.length) break;
+                const c = H.weather_code ? H.weather_code[i] : 0;
+                out.push({ label: H.time[i].slice(11, 13) + "h", temp: Math.round(H.temperature_2m[i]), code: c,
+                           glyph: icon(c, H.is_day ? H.is_day[i] === 1 : true),
+                           rain: H.precipitation_probability ? (H.precipitation_probability[i] || 0) : 0 });
             }
             hours = out;
             const dl = [];
@@ -83,9 +92,11 @@ Singleton {
                 const d = new Date(j.daily.time[i] + "T12:00:00");
                 const c = j.daily.weather_code ? j.daily.weather_code[i] : 0;
                 dl.push({ label: i === 0 ? "Today" : Qt.formatDate(d, "ddd"), high: Math.round(j.daily.temperature_2m_max[i]),
-                          low: Math.round(j.daily.temperature_2m_min[i]), code: c, glyph: icon(c, true), text: describe(c) });
+                          low: Math.round(j.daily.temperature_2m_min[i]), code: c, glyph: icon(c, true), text: describe(c),
+                          rain: j.daily.precipitation_probability_max ? (j.daily.precipitation_probability_max[i] || 0) : 0 });
             }
             days = dl;
+            rainToday = dl.length ? dl[0].rain : 0;
             ready = true;
             error = "";
         } catch (e) {

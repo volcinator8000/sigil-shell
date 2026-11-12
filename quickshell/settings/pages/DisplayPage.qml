@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
-// Display: backlight and night light (hyprsunset.conf, same format as the GTK app).
+// Display: monitors (MonitorsSection: layout, modes, VRR, 10-bit), backlight and night light
+// (hyprsunset.conf, same format as the GTK app).
 
 import QtQuick
 import QtQuick.Layouts
@@ -86,8 +87,10 @@ PageView {
         Sh.toast(enabled ? "Night light schedule applied" : "Night light schedule disabled");
     }
 
+    MonitorsSection {}
+
     Section {
-        title: "Display"
+        title: "Brightness"
         SettingRow {
             title: "Brightness"; subtitle: "Panel backlight"
             Slider { from: 1; to: 100; value: page.brightness; onCommitted: v => Sh.run(["brightnessctl", "-q", "set", Math.round(v) + "%"]) }

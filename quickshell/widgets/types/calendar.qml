@@ -100,8 +100,13 @@ Column {
         }
     }
 
-    // the list: the selected day's events, then upcoming ones after it
-    readonly property int maxEvents: entry.h ? Math.max(0, Math.floor((entry.h - 260) / 20)) : (o("events") === undefined ? 4 : o("events"))
+    // view: "month" = grid + the selected day / what's next, "agenda" = the coming days as a list
+    readonly property bool agenda: o("view") === "agenda"
+    // the list: the selected day's events, then upcoming ones after it. A resized widget fits as
+    // many as its height allows, never fewer than the "Events listed" option.
+    readonly property int optEvents: o("events") === undefined ? 4 : o("events")
+    readonly property int fitEvents: entry.h ? Math.floor((entry.h - (agenda ? 28 : monthBlock.height + 36) - 14) / 20) : 0
+    readonly property int maxEvents: Math.max(optEvents, fitEvents)
     readonly property var listed: {
         const day = byDay[selected] || [];
         const out = day.map(e => ({ e: e, day: true }));
@@ -111,6 +116,29 @@ Column {
             if (e.start > after) out.push({ e: e, day: false });
         }
         return out.slice(0, Math.max(maxEvents, day.length));
+    }
+    // agenda: [{ head: "Today · Thu 12" } | { e, day: true }], the next `agendaDays` days from the selected one
+    readonly property var agendaRows: {
+        if (!agenda) return [];
+        const out = [];
+        const start = new Date(selected + "T12:00:00");
+        const nd = Math.max(1, o("agendaDays") || 7);
+        let n = 0;
+        for (let i = 0; i < nd && n < maxEvents; i++) {
+            const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+            const k = key(d), evs = byDay[k] || [];
+            if (!evs.length) continue;
+            const tm = key(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1));
+            out.push({ head: (k === todayKey ? "Today · " : k === tm ? "Tomorrow · " : "") + Qt.formatDate(d, "ddd d MMM") });
+            for (const e of evs) { if (n++ >= maxEvents) break; out.push({ e: e, day: true }); }
+        }
+        return out;
+    }
+    function shiftDays(n) {
+        const d = new Date(selected + "T12:00:00");
+        d.setDate(d.getDate() + n);
+        selected = key(d);
+        offset = (d.getFullYear() - today.getFullYear()) * 12 + d.getMonth() - today.getMonth();
     }
     function when(e, dayItem) {
         const s = new Date(e.start);
@@ -132,7 +160,7 @@ Column {
         height: 20
         WLabel {
             anchors.verticalCenter: parent.verticalCenter
-            text: Qt.formatDate(root.shown, "MMMM yyyy")
+            text: root.agenda ? (root.selected === root.todayKey ? "Coming up" : "From " + Qt.formatDate(new Date(root.selected + "T12:00:00"), "ddd d MMM")) : Qt.formatDate(root.shown, "MMMM yyyy")
             font.bold: true
             font.pixelSize: 14
         }
@@ -151,12 +179,14 @@ Column {
             }
             Nav { visible: root.offset !== 0 || root.selected !== root.todayKey; width: 40; text: "today"; font.pixelSize: 12; onHit: { root.offset = 0; root.selected = root.todayKey; } }
             Nav { text: "+"; font.pixelSize: 15; onHit: Actions.newEvent(root.selected) }
-            Nav { text: "‹"; onHit: root.offset-- }
-            Nav { text: "›"; onHit: root.offset++ }
+            Nav { text: "‹"; onHit: root.agenda ? root.shiftDays(-7) : root.offset-- }
+            Nav { text: "›"; onHit: root.agenda ? root.shiftDays(7) : root.offset++ }
         }
     }
 
     Grid {
+        id: monthBlock
+        visible: !root.agenda
         columns: 7
         columnSpacing: 2
         rowSpacing: 2
@@ -231,30 +261,44 @@ Column {
         Rectangle { width: root.w; height: 1; color: Theme.alpha(Theme.fg, 0.08) }
         Item { width: 1; height: 4 }
         WLabel {
-            visible: (root.byDay[root.selected] || []).length === 0
-            text: (root.selected === root.todayKey ? "nothing today" : "nothing on " + Qt.formatDate(new Date(root.selected + "T12:00:00"), "ddd d MMM")) + (root.listed.length ? " · next:" : "")
+            visible: root.agenda ? root.agendaRows.length === 0 : (root.byDay[root.selected] || []).length === 0
+            text: root.agenda ? "nothing in the next " + (root.o("agendaDays") || 7) + " days"
+                : (root.selected === root.todayKey ? "nothing today" : "nothing on " + Qt.formatDate(new Date(root.selected + "T12:00:00"), "ddd d MMM")) + (root.listed.length ? " · next:" : "")
             color: Theme.widgetDim
             font.pixelSize: 12
             height: 18
         }
         Repeater {
-            model: root.listed
+            model: root.agenda ? root.agendaRows : root.listed
             delegate: Item {
                 id: ev
                 required property var modelData
+                required property int index
                 width: root.w
-                height: 18
+                height: modelData.head ? 22 : 18
+                // agenda day heading
+                WLabel {
+                    visible: ev.modelData.head !== undefined
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: 2
+                    text: ev.modelData.head || ""
+                    color: Theme.a2
+                    font.pixelSize: 12
+                    font.bold: true
+                }
                 Rectangle {
+                    visible: ev.modelData.e !== undefined
                     width: 2; height: 12; radius: 1; anchors.verticalCenter: parent.verticalCenter
-                    color: ev.modelData.e.color ? ev.modelData.e.color : ev.modelData.day ? Theme.a1 : Theme.alpha(Theme.a2, 0.6)
+                    color: ev.modelData.e && ev.modelData.e.color ? ev.modelData.e.color : ev.modelData.day ? Theme.a1 : Theme.alpha(Theme.a2, 0.6)
                     opacity: ev.modelData.day ? 1 : 0.7
                 }
                 WLabel {
                     id: whenL
+                    visible: ev.modelData.e !== undefined
                     x: 8
                     anchors.verticalCenter: parent.verticalCenter
                     width: ev.modelData.day ? 44 : 78
-                    text: root.when(ev.modelData.e, ev.modelData.day)
+                    text: ev.modelData.e ? root.when(ev.modelData.e, ev.modelData.day) : ""
                     color: ev.modelData.day ? Theme.a1 : Theme.widgetDim
                     font.pixelSize: 12
                 }
@@ -263,7 +307,8 @@ Column {
                     anchors.verticalCenter: parent.verticalCenter
                     width: root.w - x
                     elide: Text.ElideRight
-                    text: ev.modelData.e.title + (root.w >= 300 && ev.modelData.e.location ? "  ·  " + ev.modelData.e.location : "")
+                    visible: ev.modelData.e !== undefined
+                    text: ev.modelData.e ? ev.modelData.e.title + (root.w >= 300 && ev.modelData.e.location ? "  ·  " + ev.modelData.e.location : "") : ""
                     font.pixelSize: 12
                 }
             }

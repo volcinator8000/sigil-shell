@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+"""sigil-monitors: re-apply the monitor rules after the Display page writes ~/.config/hypr/monitors.lua.
+
+    sigil-monitors apply [NAME…]   re-issue every rule (sigil_monitors() in hyprland.lua);
+                                   NAMEs (connector names) are first switched to a temporary
+                                   mode, because Hyprland only re-commits vrr / bitdepth when the
+                                   mode changes
+    sigil-monitors reset           delete monitors.lua and re-apply hyprland.lua's own rules
+"""
+import json
+import os
+import subprocess
+import sys
+import time
+
+OVERRIDE = os.path.expanduser("~/.config/hypr/monitors.lua")
+
+
+def hypr(*args):
+    return subprocess.run(["hyprctl", *args], capture_output=True, text=True, timeout=10).stdout
+
+
+def lua_str(s):
+    return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def other_mode(mon):
+    """A mode different from the current one: same size at another refresh if possible."""
+    cur_size = (mon["width"], mon["height"])
+    cur_hz = round(mon["refreshRate"])
+    modes = []
+    for m in mon.get("availableModes", []):
+        size, hz = m.split("@")
+        w, h = map(int, size.split("x"))
+        modes.append((w, h, float(hz.rstrip("Hz"))))
+    same = [m for m in modes if (m[0], m[1]) == cur_size and round(m[2]) != cur_hz]
+    pick = same[0] if same else next((m for m in modes if (m[0], m[1]) != cur_size), None)
+    return f"{pick[0]}x{pick[1]}@{pick[2]:g}" if pick else None
+
+
+def apply(names):
+    if names:
+        mons = {m["name"]: m for m in json.loads(hypr("monitors", "all", "-j") or "[]")}
+        nudge = {}
+        for n in names:
+            m = mons.get(n)
+            mode = other_mode(m) if m and not m.get("disabled") else None
+            if mode:
+                nudge[n] = mode
+                if m.get("description"):
+                    nudge[m["description"]] = mode
+        if nudge:
+            table = ", ".join(f"[{lua_str(k)}] = {lua_str(v)}" for k, v in nudge.items())
+            hypr("eval", f"sigil_monitors({{ {table} }})")
+            time.sleep(1.5)
+    out = hypr("eval", "sigil_monitors()").strip()
+    if out != "ok":
+        print(out, file=sys.stderr)
+        return 1
+    return 0
+
+
+def main():
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "apply"
+    if cmd == "apply":
+        return apply(sys.argv[2:])
+    if cmd == "reset":
+        try:
+            os.remove(OVERRIDE)
+        except FileNotFoundError:
+            pass
+        # the override may have added rules hyprland.lua does not have; a reload drops them
+        hypr("reload")
+        time.sleep(0.5)
+        return apply([])
+    print(__doc__, file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())
