@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Widget maker
+GenericName=Desktop widgets
+Comment=Customise your desktop widgets and build new ones
+Exec=sigil-widgets
+Icon=applications-graphics
+Categories=Settings;DesktopSettings;
+Keywords=widgets;desktop;sigil;quickshell;
+StartupWMClass=dev.sigil.widgets

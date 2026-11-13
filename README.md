@@ -72,8 +72,27 @@ not engaged within 2 s, and `hypr/sigil.lua` enables `misc:allow_session_lock_re
 Other helpers in `bin/`: `sigil-updates` / `sigil-update-now` (pending packages, upgrade
 window), `sigil-keepawake`, `sigil-nightlight` (hyprsunset schedule + override),
 `sigil-battery` (one-line status), `sigil-tablet-detect`, `sigil-apply` (palette templates),
-`sigil-monitors` (re-applies monitor rules after the Display page writes
+`sigil-widgets` (the widget maker, below), `sigil-widget-snap` (renders one widget to a PNG
+offscreen), `sigil-monitors` (re-applies monitor rules after the Display page writes
 `~/.config/hypr/monitors.lua`; `sigil-monitors reset` drops every override).
+
+## Widget maker
+
+`sigil-widgets` (app launcher: "Widget maker", or Settings → Widgets → Widget maker) is a GTK
+app for the desktop widgets:
+
+- **On your desktop**: every placed widget with its style, size, opacity and options, applied live.
+- **Widget types**: preview a type, add it, change the options it offers, edit its QML (with live
+  preview), or duplicate it as a new type to change freely.
+- **New widget**: build one without writing QML. Data comes from sensors (CPU, RAM, GPUs, temps,
+  battery, network, weather, music, time), shell commands on a timer, or watched text files; the
+  layout is a stack of blocks (big text, text, label + value with a graph, bars, graphs, command
+  output, buttons, dividers). Text takes `{id}`, `{id:1}` and `{opt.key}`. Saving writes
+  `widgets/types/<name>.qml`, its spec `<name>.widget.json` and the registry entry.
+
+The live preview is a second Quickshell (`preview/`, which links the shell's services, components
+and widgets) drawing one widget with the real frame and styles; it follows
+`~/.cache/sigil/preview.json`. The app itself is `maker/` (`app.py`, `gen.py` = spec → QML).
 
 ## Staying up
 
@@ -144,6 +163,9 @@ quickshell/
   palettes/*.json        palette definitions
 templates/*.tmpl         app colour templates (header says target file + reload command)
 bin/                     sigil, sigil-do, sigil-session, sigil-units, sigil-health, sigil-apply, helpers
+maker/                   the widget maker app (GTK 4 / libadwaita) and its QML generator
+preview/                 one-widget Quickshell config used for live previews and snapshots
+applications/            .desktop entries (linked by install.sh)
 systemd/                 sigil-shell.service, sigil-health.{service,timer}
 hypr/sigil.lua           layer blur rules and keybinds
 ```

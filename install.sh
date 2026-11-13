@@ -2,6 +2,7 @@
 # Link sigil-shell into place. Safe to re-run; touches nothing outside these paths:
 #   ~/.config/quickshell/sigil  -> <repo>/quickshell
 #   ~/.local/bin/sigil*        -> <repo>/bin/*
+#   ~/.local/share/applications/sigil-*.desktop -> <repo>/applications/*
 #   ~/.config/systemd/user/sigil-{shell,health}.* -> <repo>/systemd/*
 #   ~/.config/sigil/settings.json (created with defaults if missing)
 set -euo pipefail
@@ -14,6 +15,8 @@ for f in "$REPO"/bin/*; do
     ln -sfn "$f" "$HOME/.local/bin/$(basename "$f")"
 done
 "$REPO/bin/sigil-units" link
+mkdir -p "$HOME/.local/share/applications"
+for f in "$REPO"/applications/*.desktop; do ln -sfn "$f" "$HOME/.local/share/applications/$(basename "$f")"; done
 
 if [ ! -f "$HOME/.config/sigil/settings.json" ]; then
     cat > "$HOME/.config/sigil/settings.json" <<'EOF'

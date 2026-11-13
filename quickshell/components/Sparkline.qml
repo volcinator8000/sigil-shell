@@ -29,7 +29,12 @@ Item {
         visible: root.pts.length > 1
         preferredRendererType: Shape.CurveRenderer
         ShapePath {
-            fillColor: Theme.alpha(root.lineColor, 0.22)
+            // fades towards the baseline, so the line reads first and the area stays light
+            fillGradient: LinearGradient {
+                x1: 0; y1: 0; x2: 0; y2: root.height
+                GradientStop { position: 0; color: Theme.alpha(root.lineColor, 0.34) }
+                GradientStop { position: 1; color: Theme.alpha(root.lineColor, 0.02) }
+            }
             strokeColor: "transparent"
             PathPolyline {
                 path: root.pts.length > 1 ? [Qt.point(0, root.height)].concat(root.pts, [Qt.point(root.pts[root.pts.length - 1].x, root.height)]) : []

@@ -111,6 +111,11 @@ PageView {
             }
         }
         SettingRow {
+            title: "Widget maker"
+            subtitle: "build your own widgets without code, or edit a type's options and QML (sigil-widgets)"
+            ActionButton { text: "Open"; onClicked: { Sh.spawn(["sigil-widgets"]); Sh.hideWindow(); } }
+        }
+        SettingRow {
             title: "Show widgets"
             subtitle: "raise them above windows while you edit here"
             Toggle { checked: Widgets.peek; onToggled: on => { if (on !== Widgets.peek) Widgets.togglePeek(); } }

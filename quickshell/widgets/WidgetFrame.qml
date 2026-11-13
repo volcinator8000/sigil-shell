@@ -9,6 +9,7 @@ Item {
     id: frame
     property var entry: ({})
     property bool editing: false
+    property string sourceOverride: ""      // a draft .qml instead of types/<type>.qml (preview.qml)
     readonly property bool hovered: hoverH.hovered
 
     HoverHandler { id: hoverH }
@@ -201,7 +202,7 @@ Item {
         id: content
         x: 12
         y: 12
-        source: Qt.resolvedUrl("types/" + frame.entry.type + ".qml")
+        source: frame.sourceOverride ? "file://" + frame.sourceOverride : Qt.resolvedUrl("types/" + frame.entry.type + ".qml")
         // every type gets its entry (opts live in entry.opts; read them with Widgets.opt(entry, key))
         onLoaded: { item.entry = Qt.binding(() => frame.liveEntry); frame.header = frame.findHeader(item); }
         // Text on bare widgets gets a soft shadow so it stays readable on any wallpaper.

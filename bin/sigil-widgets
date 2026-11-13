@@ -1,0 +1,10 @@
+#!/usr/bin/env python3
+"""sigil-widgets: the widget maker. Customise the widgets on the desktop, edit widget types,
+and build new ones without writing QML (live preview). The app lives in <repo>/maker/."""
+import os
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "maker"))
+from app import main  # noqa: E402
+
+sys.exit(main())

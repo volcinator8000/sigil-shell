@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# sigil-widget-snap TYPE OUT.png [STYLE] [WIDTH] [HEIGHT] [OPTS_JSON] [SOURCE.qml]
+# Renders one widget through the preview (offscreen) and crops it with a margin.
+set -eu
+type=$1 out=$2 style=${3:-frost} w=${4:-0} h=${5:-0} opts=${6:-"{}"} src=${7:-}
+tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+printf '{"type":"%s","style":"%s","w":%s,"h":%s,"opts":%s,"source":"%s","snapshot":"%s/full.png","snapshotDelay":%s}\n' \
+    "$type" "$style" "$w" "$h" "$opts" "$src" "$tmp" "${SNAP_DELAY:-5000}" > "$tmp/spec.json"
+# keep the window out of sight and unfocused while it renders
+hyprctl eval 'hl.window_rule({ name = "sigil-preview-snap", match = { title = "^sigil widget snapshot$" }, float = true, move = "-3000 -3000", no_initial_focus = true })' >/dev/null 2>&1 || true
+SIGIL_PREVIEW="$tmp/spec.json" SIGIL_PREVIEW_TITLE="sigil widget snapshot" timeout -k 2 30 qs -p "$(dirname "$(realpath "$0")")/../preview" </dev/null >"$tmp/log" 2>&1 || true
+read -r x y cw ch < <(sed -n 's/.*SNAP \([0-9-]*\) \([0-9-]*\) \([0-9]*\) \([0-9]*\).*/\1 \2 \3 \4/p' "$tmp/log" | tail -1)
+[ -s "$tmp/full.png" ] || { grep -v INFO "$tmp/log" >&2; exit 1; }
+m=24
+magick "$tmp/full.png" -crop "$((cw + 2*m))x$((ch + 2*m))+$((x - m))+$((y - m))" +repage "$out"
+echo "$out"
