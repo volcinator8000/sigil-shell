@@ -113,7 +113,7 @@ PageView {
         SettingRow {
             title: "Widget maker"
             subtitle: "build your own widgets without code, or edit a type's options and QML (sigil-widgets)"
-            ActionButton { text: "Open"; onClicked: { Sh.spawn(["sigil-widgets"]); Sh.hideWindow(); } }
+            ActionButton { text: "Open"; onClicked: { Sh.spawn([Sh.home + "/.local/bin/sigil-widgets"]); Sh.hideWindow(); } }
         }
         SettingRow {
             title: "Show widgets"
