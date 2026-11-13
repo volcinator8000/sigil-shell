@@ -21,3 +21,7 @@ hl.bind("SUPER + SHIFT + W", hl.dsp.global("sigil:widgets-edit"))  -- arrange wi
 
 -- Settings window rules (owned by quickshell/settings)
 pcall(dofile, os.getenv("HOME") .. "/sigil-shell/hypr/sigil-settings.lua")
+
+-- Widget maker (sigil-widgets): its live preview floats next to it instead of tiling
+hl.window_rule({ name = "sigil-widget-preview", match = { title = "^sigil widget preview$" }, float = true, size = "720 540" })
+hl.window_rule({ name = "sigil-widget-snapshot", match = { title = "^sigil widget snapshot$" }, float = true, move = "-3000 -3000", no_initial_focus = true })
