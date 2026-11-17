@@ -119,6 +119,18 @@ PanelWindow {
                     onClicked: Widgets.togglePeek()
                 }
             }
+
+            Label {
+                // date beside the clock, DD/MM/YY
+                Layout.leftMargin: -Theme.bs(8)   // sit closer to the clock than the row spacing
+                color: Theme.dim
+                font.pixelSize: Theme.bs(12)
+                text: Qt.formatDate(sysClock.date, "dd/MM/yy")
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: Widgets.togglePeek()
+                }
+            }
         }
     }
 }
