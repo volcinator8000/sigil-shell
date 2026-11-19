@@ -27,6 +27,9 @@ Overlay {
         { key: "P", label: "shutdown",  glyph: 0xF0425, cmd: ["systemctl", "poweroff"] }
     ]
     property int current: 0
+    // lock always sits nearest the hot corner, shutdown farthest from it
+    readonly property bool mirrored: menu.cornerMode && !menu.atLeft
+    readonly property int stepRight: mirrored ? -1 : 1
     onShownChanged: if (shown) { current = 0; row.forceActiveFocus(); }
 
     function activate(i) {
@@ -52,11 +55,12 @@ Overlay {
         anchors.centerIn: parent
         spacing: 12
         focus: true
+        layoutDirection: menu.mirrored ? Qt.RightToLeft : Qt.LeftToRight
 
         HoverHandler { id: rowHover }
 
-        Keys.onLeftPressed: menu.current = (menu.current + menu.items.length - 1) % menu.items.length
-        Keys.onRightPressed: menu.current = (menu.current + 1) % menu.items.length
+        Keys.onLeftPressed: menu.current = (menu.current - menu.stepRight + menu.items.length) % menu.items.length
+        Keys.onRightPressed: menu.current = (menu.current + menu.stepRight + menu.items.length) % menu.items.length
         Keys.onTabPressed: menu.current = (menu.current + 1) % menu.items.length
         Keys.onReturnPressed: menu.activate(menu.current)
         Keys.onEnterPressed: menu.activate(menu.current)
