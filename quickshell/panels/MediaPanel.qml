@@ -2,26 +2,71 @@ pragma ComponentBehavior: Bound
 
 // Now-playing card that pops out of whichever corner triggered it.
 // Closes when the pointer leaves it, or after 4 s if it is never entered.
+// It also peeks out of the corner mapped to "media" when the track changes
+// (Theme.trackPopup: spotify | all | off), then tucks back after a few seconds;
+// hovering it during a peek keeps it out until the pointer leaves.
 
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
+import Quickshell.Hyprland
 import Quickshell.Services.Mpris
 import qs.services
 import qs.components
 
 PanelWindow {
     id: panel
-    readonly property string corner: Actions.mediaCorner
+    readonly property string corner: Actions.mediaOpen ? Actions.mediaCorner : peekCorner
     readonly property bool atTop: corner.startsWith("top")
     readonly property bool atLeft: corner.endsWith("Left")
 
     readonly property var player: Players.active
 
-    property real openness: Actions.mediaOpen ? 1 : 0
-    Behavior on openness { NumberAnimation { duration: Actions.mediaOpen ? Theme.dur(340) : Theme.dur(300); easing.type: Actions.mediaOpen ? Easing.OutQuint : Easing.InOutCubic } }
-    visible: Actions.mediaOpen || openness > 0.001
+    // ── track-change peek ─────────────────────────────────────────────
+    property bool peeking: false
+    property string peekCorner: "bottomLeft"
+    readonly property bool shown: Actions.mediaOpen || peeking
+    readonly property bool peekOnly: peeking && !Actions.mediaOpen
+
+    readonly property string trackKey: player ? (player.trackTitle || "") + "\u0001" + (player.trackArtist || "") : ""
+    property string lastKey: ""
+    property bool primed: false     // players announce their current track at start-up: not a change
+    Timer { running: true; interval: 3000; onTriggered: panel.primed = true }
+    // metadata arrives in pieces (title, then artist, then art): let it settle first
+    onTrackKeyChanged: { settle.restart(); if (openness > 0.99) swapIn.restart(); }
+    Timer { id: settle; interval: 350; onTriggered: panel.maybePeek() }
+    Timer { id: peekTimer; interval: 4500; onTriggered: if (!panel.entered) panel.peeking = false }
+
+    function maybePeek() {
+        const k = trackKey, prev = lastKey;
+        lastKey = k;
+        const p = player;
+        if (!primed || !p || !p.trackTitle || k === prev) return;
+        if (Theme.trackPopup === "off") return;
+        if (Theme.trackPopup === "spotify" && !Players.matches(p, "org.mpris.MediaPlayer2.spotify")) return;
+        if (!p.isPlaying || Lock.locked || Actions.mediaOpen) return;      // open: the card updates in place
+        if (Hyprland.focusedWorkspace && Hyprland.focusedWorkspace.hasFullscreen) return;
+        if (Actions.launcherMode || Actions.controlCenterOpen || Actions.powerOpen || Actions.notePath || Actions.eventDate) return;
+        if (!peeking) {
+            const c = Object.keys(Theme.corners).find(k => Theme.corners[k] === "media");
+            peekCorner = c || "bottomLeft";
+            entered = false;
+        }
+        peeking = true;
+        peekTimer.restart();
+        drainAnim.restart();
+    }
+    Connections { target: Lock; function onLockedChanged() { if (Lock.locked) panel.peeking = false; } }
+
+    property real openness: shown ? 1 : 0
+    Behavior on openness {
+        NumberAnimation {
+            duration: panel.shown ? Theme.dur(panel.peekOnly ? 520 : 340) : Theme.dur(panel.peekOnly ? 460 : 300)
+            easing.type: panel.shown ? Easing.OutQuint : Easing.InOutCubic
+        }
+    }
+    visible: shown || openness > 0.001
     anchors { top: atTop; bottom: !atTop; left: atLeft; right: !atLeft }
     // tucked into the corner, flush with both edges (under the bar at the top)
     readonly property int fillet: Theme.frameRadius
@@ -47,7 +92,17 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "sigil-panel"
 
-    Connections { target: Actions; function onMediaOpenChanged() { if (Actions.mediaOpen) { panel.entered = false; autoClose.restart(); } } }
+    Connections {
+        target: Actions
+        function onMediaOpenChanged() {
+            if (!Actions.mediaOpen) { panel.peeking = false; return; }
+            panel.peekCorner = Actions.mediaCorner;     // stays put while it slides away
+            // opened from its corner mid-peek: the pointer is already on the card
+            panel.entered = panel.peeking && cardHover.hovered;
+            panel.peeking = false;
+            autoClose.restart();
+        }
+    }
     property bool entered: false
     Timer { id: autoClose; interval: 4000; onTriggered: if (!panel.entered) Actions.mediaOpen = false }
     Timer { id: leftCorner; interval: 450; onTriggered: if (!panel.entered && !Actions.cornerInside[panel.corner]) Actions.mediaOpen = false }
@@ -65,15 +120,42 @@ PanelWindow {
         transform: Translate { y: panel.slideY }
 
         HoverHandler {
+            id: cardHover
             onHoveredChanged: {
                 if (hovered) panel.entered = true;
-                else if (panel.entered) Actions.mediaOpen = false;
+                else if (panel.entered) { Actions.mediaOpen = false; panel.peeking = false; }
+            }
+        }
+
+        // how long the peek stays out, drained along the card's inner edge
+        Rectangle {
+            anchors { left: parent.left; leftMargin: 12; top: panel.atTop ? undefined : parent.top; bottom: panel.atTop ? parent.bottom : undefined }
+            height: 2
+            radius: 1
+            color: Theme.a1
+            opacity: panel.peekOnly && !panel.entered ? 0.7 : 0
+            Behavior on opacity { NumberAnimation { duration: Theme.dur(200) } }
+            width: (parent.width - 24) * drain.value
+            QtObject { id: drain; property real value: 1 }
+            NumberAnimation {
+                id: drainAnim
+                target: drain; property: "value"; from: 1; to: 0
+                duration: peekTimer.interval
             }
         }
 
         RowLayout {
+            id: content
             anchors { fill: parent; margins: 12 }
             spacing: 12
+            // a new track while the card is out slides its details in
+            property real shift: 0
+            transform: Translate { x: content.shift }
+            ParallelAnimation {
+                id: swapIn
+                NumberAnimation { target: content; property: "opacity"; from: 0; to: 1; duration: Theme.dur(320); easing.type: Easing.OutCubic }
+                NumberAnimation { target: content; property: "shift"; from: 14; to: 0; duration: Theme.dur(380); easing.type: Easing.OutQuint }
+            }
 
             Rectangle {
                 Layout.preferredWidth: 84

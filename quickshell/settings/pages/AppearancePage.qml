@@ -285,5 +285,14 @@ PageView {
                 }
             }
         }
+        SettingRow {
+            title: "Pop up on track change"
+            subtitle: "slide the media card out of its corner for a few seconds when the song changes"
+            Segmented {
+                options: ["spotify", "all", "off"]
+                current: Theme.trackPopup
+                onActivated: v => page.save({ media: { trackPopup: v } })
+            }
+        }
     }
 }

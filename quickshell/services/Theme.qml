@@ -27,6 +27,8 @@ Singleton {
     property var weather: ({ city: "Paris", lat: 48.8566, lon: 2.3522 })
     property string wallpaperOverride: ""
     property bool barLyrics: true
+    // media card pops out of its corner when the track changes: spotify | all | off
+    property string trackPopup: "spotify"
     property real barScale: 1.1          // settings.json → bar.scale
     function bs(n) { return Math.round(n * barScale); }
     // screen frame: bar on top, a `frame`-px border on the other edges, rounded inside;
@@ -126,6 +128,7 @@ Singleton {
         if (s.weather) weather = Object.assign({}, weather, s.weather);
         wallpaperOverride = s.wallpaper || "";
         barLyrics = !(s.bar && s.bar.lyrics === false);
+        trackPopup = (s.media && s.media.trackPopup) || "spotify";
         frame = s.frame !== undefined ? Math.max(0, Math.min(24, s.frame)) : 4;
         gap = s.gap !== undefined ? Math.max(0, Math.min(40, s.gap)) : 6;
         barScale = (s.bar && s.bar.scale) ? Math.max(0.8, Math.min(1.6, s.bar.scale)) : 1.1;
